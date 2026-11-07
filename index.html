@@ -1,52 +1,52 @@
 <!doctype html>
 <html lang="it">
+<!-- avoid-ai-design-ignore: K7 (gli stili :focus-visible sono in css/style.css) -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CaseStudio Open</title>
-<meta name="description" content="Generatore parametrico di cover per telefono stampabili in 3D su Bambu Lab A1 mini, senza AMS.">
-<meta name="theme-color" content="#0b1018">
+<meta name="description" content="Generatore parametrico di cover per telefono in due pezzi, stampabili su Bambu Lab A1 mini senza AMS.">
+<meta name="theme-color" content="#d9dde0">
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
-<div class="aurora" aria-hidden="true"></div>
-
 <main class="stage">
-  <canvas id="cv" aria-label="Anteprima 3D della cover"></canvas>
+  <canvas id="cv" tabindex="0" aria-label="Anteprima 3D della cover sul piano di stampa. Trascina per ruotare, rotella per lo zoom."></canvas>
 
-  <div class="toolbar glass" role="toolbar" aria-label="Vista">
-    <button class="tb" data-view="back" title="Retro"><svg class="i"><use href="sprite.svg#smartphone"/></svg><span>Retro</span></button>
-    <button class="tb" data-view="front" title="Fronte"><svg class="i"><use href="sprite.svg#scan-line"/></svg><span>Fronte</span></button>
-    <button class="tb" data-view="side" title="Lato"><svg class="i"><use href="sprite.svg#layers"/></svg><span>Lato</span></button>
-    <button class="tb" data-view="angle" title="3D"><svg class="i"><use href="sprite.svg#rotate-3d"/></svg><span>3D</span></button>
-    <i class="sep"></i>
-    <button class="tb toggle" id="tgExplode" aria-pressed="false" title="Vista esplosa"><svg class="i"><use href="sprite.svg#move-3d"/></svg><span>Esplodi</span></button>
-    <button class="tb toggle" id="tgPhone" aria-pressed="false" title="Mostra il telefono"><svg class="i"><use href="sprite.svg#eye"/></svg><span>Telefono</span></button>
+  <div class="brandbar glass">
+    <img src="assets/logo.svg" alt="" width="32" height="32">
+    <div><b>CaseStudio Open</b><small>Cover in due pezzi per A1 mini, senza AMS</small></div>
   </div>
 
-  <a class="maker glass" href="https://github.com/fedcr/casestudio-open" target="_blank" rel="noopener" aria-label="EveryThink">
-    <img src="assets/everythink.png" alt="EveryThink" width="34" height="34"><span>EveryThink</span>
-  </a>
+  <div class="views glass" role="toolbar" aria-label="Vista">
+    <button class="tb" data-view="angle" aria-label="Vista prospettica"><svg class="i"><use href="sprite.svg#rotate-3d"/></svg><span>3D</span></button>
+    <button class="tb" data-view="back" aria-label="Vista dall'alto, retro della cover"><svg class="i"><use href="sprite.svg#smartphone"/></svg><span>Retro</span></button>
+    <button class="tb" data-view="side" aria-label="Vista laterale"><svg class="i"><use href="sprite.svg#layers"/></svg><span>Lato</span></button>
+    <button class="tb" data-view="front" aria-label="Vista da sotto, lato schermo"><svg class="i"><use href="sprite.svg#scan-line"/></svg><span>Schermo</span></button>
+    <i class="sep" aria-hidden="true"></i>
+    <button class="tb" id="tgExplode" aria-pressed="false"><svg class="i"><use href="sprite.svg#move-3d"/></svg><span>Separa i pezzi</span></button>
+    <button class="tb" id="tgPhone" aria-pressed="false"><svg class="i"><use href="sprite.svg#eye"/></svg><span>Telefono</span></button>
+  </div>
 
   <div class="status glass" id="status" role="status" aria-live="polite">
     <svg class="i spin" id="stSpin"><use href="sprite.svg#loader-circle"/></svg>
-    <span id="stText">Avvio motore 3D…</span>
+    <span id="stText">Avvio del motore 3D</span>
   </div>
 </main>
 
-<aside class="panel glass" id="panel">
-  <header class="ph">
-    <div class="brand"><img class="logo" src="assets/logo.svg" alt="" width="36" height="36"><div><b>CaseStudio Open</b><small>Cover 3D per A1 mini · senza AMS</small></div></div>
-  </header>
+<aside class="panel glass" id="panel" aria-label="Impostazioni della cover">
   <nav class="tabs" id="tabs" role="tablist"></nav>
   <div class="body" id="body"></div>
   <footer class="pf">
-    <div class="info" id="info"></div>
+    <div>
+      <div class="info" id="info">Calcolo in corso</div>
+      <a class="maker" href="https://github.com/fedcr/casestudio-open" target="_blank" rel="noopener"><img src="assets/everythink.png" alt="" width="18" height="18">Un progetto EveryThink</a>
+    </div>
     <button class="btn primary" id="goExport"><svg class="i"><use href="sprite.svg#download"/></svg>Esporta</button>
   </footer>
 </aside>

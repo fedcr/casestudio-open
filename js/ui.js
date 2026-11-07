@@ -48,7 +48,7 @@ function setStatus(text, mode = 'idle') {
   $('#stSpin').firstElementChild.setAttribute('href', 'sprite.svg#' + (mode === 'err' ? 'triangle-alert' : mode === 'ok' ? 'check' : 'loader-circle'));
 }
 let timer = 0;
-function schedule(delay = 140) { clearTimeout(timer); save(); setStatus('Aggiorno il modello…', 'busy'); timer = setTimeout(rebuild, delay); }
+function schedule(delay = 140) { clearTimeout(timer); save(); setStatus('Aggiorno il modello', 'busy'); timer = setTimeout(rebuild, delay); }
 async function rebuild() {
   const r = await request();
   if (r.id !== seq) return; // risposta superata da una richiesta piu' recente
@@ -57,7 +57,7 @@ async function rebuild() {
   viewer.setModel(r, r.meta);
   viewer.setColors(P.colors, P.pattern.twoTone);
   viewer.showPhone(showPhone, P, r.meta);
-  document.documentElement.style.setProperty('--accent', P.colors.bumper);
+  applyAccent();
   setStatus(`Pronto in ${(r.stats.ms / 1000).toFixed(1)} s`, 'ok');
   renderInfo();
   if (r.meta.warnings.length) toast(r.meta.warnings[0]);
@@ -66,7 +66,7 @@ async function rebuild() {
 function renderInfo() {
   if (!last) return;
   const m = last.meta, gT = last.stats.bumperVol * 1.21 / 1000 * 0.7, gP = last.stats.plateVol * 1.24 / 1000 * 0.8;
-  $('#info').innerHTML = `<b>${m.outerW.toFixed(1)} × ${m.outerH.toFixed(1)} × ${m.Z.toFixed(1)}</b> mm<br>TPU ≈ <b>${gT.toFixed(0)} g</b> · PLA ≈ <b>${gP.toFixed(0)} g</b>`;
+  $('#info').innerHTML = `<b>${m.outerW.toFixed(1)} × ${m.outerH.toFixed(1)} × ${m.Z.toFixed(1)} mm</b><br>Bordo ~${gT.toFixed(0)} g di TPU, piastra ~${gP.toFixed(0)} g di PLA`;
 }
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4500); }
@@ -154,10 +154,10 @@ const note = (t, cls = '', icon = 'triangle-alert') => `<div class="note ${cls}"
 
 const TABS = [
   ['phone', 'smartphone', 'Telefono'], ['case', 'layers', 'Cover'], ['pattern', 'palette', 'Motivo'],
-  ['mag', 'magnet', 'MagSafe'], ['btn', 'mouse-pointer-click', 'Tasti'], ['print', 'printer', 'Stampa']
+  ['mag', 'magnet', 'Magneti'], ['btn', 'mouse-pointer-click', 'Tasti'], ['print', 'printer', 'Stampa']
 ];
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([k, ic, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}" aria-label="${l}" title="${l}">${ICON(ic)}</button>`).join('');
+  $('#tabs').innerHTML = TABS.map(([k, ic, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${ICON(ic)}<span>${l}</span></button>`).join('');
 }
 
 // ---------- miniature pattern ----------
@@ -171,7 +171,7 @@ function makeThumb(p) {
   const x = c.getContext('2d'), im = x.createImageData(n, n);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const v = data[(n - 1 - j) * n + i], o = (j * n + i) * 4;
-    im.data[o] = 28 + v * 200; im.data[o + 1] = 40 + v * 190; im.data[o + 2] = 62 + v * 185; im.data[o + 3] = 255;
+    im.data[o] = 244 - v * 216; im.data[o + 1] = 245 - v * 210; im.data[o + 2] = 246 - v * 206; im.data[o + 3] = 255;
   }
   x.putImageData(im, 0, 0);
   const url = c.toDataURL(); thumbCache.set(p.id, url); return url;
@@ -204,23 +204,23 @@ function drawEditor() {
   const rr = (X, Y, w, h, r) => { x.beginPath(); x.roundRect(X, Y, w, h, Math.max(0, Math.min(r, w / 2, h / 2))); };
   rr(m.pad, m.pad, W * m.s, H * m.s, R * m.s);
   x.save(); x.clip();
-  x.fillStyle = '#16202f'; x.fillRect(0, 0, m.w, m.h);
+  x.fillStyle = '#eef0f2'; x.fillRect(0, 0, m.w, m.h);
   if (photoEl) { x.globalAlpha = 0.8; x.drawImage(photoEl, m.pad, m.pad, W * m.s, H * m.s); x.globalAlpha = 1; }
   x.restore();
-  rr(m.pad, m.pad, W * m.s, H * m.s, R * m.s); x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1.5; x.stroke();
-  const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3d8bff';
+  rr(m.pad, m.pad, W * m.s, H * m.s, R * m.s); x.strokeStyle = '#1c2328'; x.lineWidth = 1.5; x.stroke();
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent-ui').trim() || '#2f6bd8';
   P.phone.cams.forEach((c, i) => {
     const X = m.pad + c.x * m.s, Y = m.pad + c.y * m.s, w = c.w * m.s, h = c.h * m.s;
     if (c.t === 'c') { x.beginPath(); x.arc(X, Y, w / 2, 0, 7); } else rr(X - w / 2, Y - h / 2, w, h, c.r * m.s);
     const on = sel.type === 'cam' && sel.i === i;
-    x.fillStyle = on ? acc + 'aa' : 'rgba(255,255,255,.14)'; x.fill();
-    x.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.6)'; x.lineWidth = on ? 2 : 1.2; x.stroke();
+    x.fillStyle = on ? acc : '#1c2328'; x.globalAlpha = on ? 0.85 : 0.7; x.fill(); x.globalAlpha = 1;
+    x.strokeStyle = on ? acc : '#1c2328'; x.lineWidth = on ? 2 : 1; x.stroke();
   });
   P.phone.buttons.forEach((b, i) => {
     const left = b.side === 'right'; // visto da dietro il lato destro e' a sinistra
     const X = left ? m.pad : m.pad + W * m.s, Y = m.pad + b.y * m.s, L = b.len * m.s;
     const on = sel.type === 'btn' && sel.i === i, off = P.buttons.enabled && !P.buttons.enabled.includes(i);
-    x.fillStyle = on ? '#fff' : off ? 'rgba(255,255,255,.2)' : acc;
+    x.fillStyle = on ? '#1c2328' : off ? '#c5cbd0' : acc;
     rr(X + (left ? -5 : -1), Y - L / 2, 6, L, 3); x.fill();
   });
 }
@@ -263,7 +263,7 @@ function edMove(e) {
 function edUp() { drag = null; }
 function shapeRows() {
   const cams = P.phone.cams.map((c, i) => `<div class="shape ${sel.type === 'cam' && sel.i === i ? 'sel' : ''}" data-sel="cam:${i}">
-    <span title="${c.t === 'c' ? 'Cerchio' : 'Rettangolo'}">${c.t === 'c' ? '●' : '▬'}</span>
+    <span title="${c.t === 'c' ? 'Cerchio' : 'Rettangolo'}">${ICON(c.t === 'c' ? 'circle-dot' : 'square')}</span>
     <input type="number" step="0.1" data-p="phone.cams.${i}.x" value="${c.x}" aria-label="X"><input type="number" step="0.1" data-p="phone.cams.${i}.y" value="${c.y}" aria-label="Y">
     <input type="number" step="0.1" data-p="phone.cams.${i}.w" value="${c.w}" aria-label="${c.t === 'c' ? 'Diametro' : 'Larghezza'}">
     ${c.t === 'c' ? '<span></span>' : `<input type="number" step="0.1" data-p="phone.cams.${i}.h" value="${c.h}" aria-label="Altezza">`}
@@ -285,15 +285,16 @@ const V = {
     const ph = phoneById(P.phoneId);
     return `<h2>Modello</h2>
     <select id="phoneSel" aria-label="Modello di telefono">${opts}</select>
-    ${ph.approx ? note('Misure di questo modello da fonti non ufficiali: confrontale con il tuo telefono.') : ''}
+    <p class="src">${ph.src ? 'Fotocamere, tasti e angoli misurati da: ' + ph.src + '.' : 'Fotocamere e tasti stimati: controllali nel disegno qui sotto.'}${ph.note ? ' ' + ph.note + '.' : ''}</p>
+    ${ph.approx ? note('Alcune misure di questo modello sono stimate: confrontale con il tuo telefono prima di stampare.') : ''}
     <h2>Dimensioni (mm)</h2>
     <div class="grid2">${num('phone.W', 'Larghezza')}${num('phone.H', 'Altezza')}${num('phone.T', 'Spessore')}${num('phone.R', 'Raggio angoli')}</div>
-    <p class="hint">Dimensioni verificate su schede ufficiali. Il raggio angoli e lo spessore dipendono dal punto in cui misuri: controlla con un calibro.</p>
+    <p class="hint">Larghezza, altezza e spessore vengono dalle schede ufficiali.</p>
     <h2>Fotocamere e tasti</h2>
     <div class="editor"><canvas id="ed" aria-label="Disegno del retro del telefono: trascina fotocamere e tasti"></canvas></div>
-    <div class="legend"><span><i style="background:rgba(255,255,255,.5)"></i>Fotocamera</span><span><i style="background:var(--accent)"></i>Tasto laterale</span></div>
+    <div class="legend"><span><i style="background:#1c2328;opacity:.7"></i>Fotocamera</span><span><i style="background:var(--accent-ui)"></i>Tasto laterale</span></div>
     <p class="hint">Vista da dietro. <b>Trascina</b> le forme per allinearle al tuo telefono; i tasti si spostano lungo il bordo.</p>
-    <div class="btns" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="btns three">
       <button class="btn sm" data-act="addc">${ICON('circle-dot')}Cerchio</button>
       <button class="btn sm" data-act="addr">${ICON('square')}Rettangolo</button>
       <label class="btn sm" for="photo" style="cursor:pointer">${ICON('image')}Foto</label>
@@ -331,13 +332,13 @@ const V = {
     P.pattern.p = { ...patternDefaults(k), ...P.pattern.p };
     const list = PATTERNS.filter(p => p.cat === patCat);
     const items = list.map(p => `<button class="pitem" data-pat="${p.id}" aria-pressed="${p.id === k}">${p.cat === 'own' && p.id !== 'none' ? `<span class="ph-icon">${ICON(p.id === 'image' ? 'image' : 'type')}</span>` : p.id === 'none' ? `<span class="ph-icon">${ICON('square')}</span>` : `<canvas width="56" height="56" data-th="${p.id}"></canvas>`}${p.label}</button>`).join('');
-    let h = `<h2>Stile della piastra <span class="count">· ${PATTERNS.length - 3} motivi</span></h2>
+    let h = `<h2>Motivo della piastra</h2>
     <div class="cats" role="group">${CATEGORIES.map(c => `<button class="cat" data-cat="${c.id}" aria-pressed="${c.id === patCat}">${c.label}</button>`).join('')}</div>
     <div class="pgrid">${items}</div>`;
     if (k === 'image') {
       const I = P.pattern.image;
       h += `<h2>La tua immagine</h2>
-      <label class="drop" for="file" tabindex="0" id="drop">${ICON('upload')}<span>${imgEl ? 'Cambia immagine' : 'Scegli un file o trascinalo qui'}</span><small style="color:var(--mute)">PNG, JPG, WebP, SVG · puoi anche incollare con Ctrl+V</small></label>`;
+      <label class="drop" for="file" tabindex="0" id="drop">${ICON('upload')}<span>${imgEl ? 'Cambia immagine' : 'Scegli un file o trascinalo qui'}</span><small>PNG, JPG, WebP o SVG. Puoi anche incollarla con Ctrl+V.</small></label>`;
       if (imgEl) h += `<img class="thumb" alt="Anteprima" src="${I.dataUrl}">
       <h2>Rilievo da</h2>${seg('pattern.image.ink', [['dark', 'Parti scure'], ['light', 'Parti chiare']])}
       <h2>Come diventa rilievo</h2>${seg('pattern.image.mode', [['binary', 'Sagoma'], ['relief', 'Sfumature']])}
@@ -379,7 +380,7 @@ const V = {
     const B = P.buttons, list = P.phone.buttons;
     const rows = list.map((b, i) => {
       const on = !B.enabled || B.enabled.includes(i);
-      return `<div data-btnrow><div class="btnrow"><label class="switch" style="margin:0"><span>${b.side === 'right' ? 'Lato destro' : 'Lato sinistro'} · ${b.len} mm</span><input type="checkbox" data-bt="${i}" ${on ? 'checked' : ''}><span class="tr"></span></label></div>
+      return `<div data-btnrow><div class="btnrow"><label class="switch" style="margin:0"><span>${b.name ? b.name + ', ' : ''}${b.side === 'right' ? 'lato destro' : 'lato sinistro'}, ${b.len} mm${b.cut ? ' (sempre forato)' : ''}</span><input type="checkbox" data-bt="${i}" ${on ? 'checked' : ''}><span class="tr"></span></label></div>
       <div class="grid2" style="margin:2px 0 8px">${num('phone.buttons.' + i + '.y', 'Dall\'alto', 0.5)}${num('phone.buttons.' + i + '.len', 'Lunghezza', 0.5)}</div></div>`;
     }).join('');
     return `<h2>Tasti laterali</h2>
@@ -395,14 +396,14 @@ const V = {
     return `<h2>Stampante</h2>
     <div class="kv"><span>Macchina</span><b>Bambu Lab A1 mini</b><span>Ugello</span><b>0,4 mm</b><span>Layer</span><b>0,2 mm</b><span>AMS</span><b>non serve</b></div>
     <h2>Bordo in TPU</h2>
-    <div class="btns">
-      <button class="btn" data-act="bumper3mf">${ICON('package')}3MF per Bambu Studio</button>
+    <div class="btns two">
+      <button class="btn" data-act="bumper3mf">${ICON('package')}3MF Bambu</button>
       <button class="btn" data-act="bumperstl">${ICON('file-box')}STL</button>
     </div>
     <p class="hint">Fronte sul piano, nessun supporto. Bobina esterna con TPU 95A, 230 °C, velocità ridotta (profilo già nel preset).</p>
     <h2>Piastra in PLA</h2>
-    <div class="btns">
-      <button class="btn" data-act="plate3mf">${ICON('package')}3MF per Bambu Studio</button>
+    <div class="btns two">
+      <button class="btn" data-act="plate3mf">${ICON('package')}3MF Bambu</button>
       <button class="btn" data-act="platestl">${ICON('file-box')}STL</button>
     </div>
     <div id="pauses"></div>
@@ -420,7 +421,7 @@ const V = {
 function updatePrintStatics() {
   const el = $('#pauses'); if (!el || !last) return;
   const ps = last.meta.pauses;
-  el.innerHTML = ps.length ? `<div class="note info">${ICON('info')}<div>${ps.map(p => `Layer <b>${Math.round(p.top_z / LAYER)}</b> (${p.top_z.toFixed(1)} mm): ${p.type === 'pause' ? 'pausa per i magneti' : 'cambio colore'}`).join('<br>')}<br><span style="color:var(--mute)">Già inseriti nel 3MF. Con l'STL aggiungili a mano dal cursore dei layer.</span></div></div>` : '';
+  el.innerHTML = ps.length ? `<div class="note info">${ICON('info')}<div>${ps.map(p => `Layer <b>${Math.round(p.top_z / LAYER)}</b> (${p.top_z.toFixed(1)} mm): ${p.type === 'pause' ? 'pausa per i magneti' : 'cambio colore'}`).join('<br>')}<br><span style="color:var(--graphite)">Già inseriti nel 3MF. Con l'STL aggiungili a mano dal cursore dei layer.</span></div></div>` : '';
 }
 
 function render() {
@@ -450,7 +451,7 @@ $('#body').addEventListener('input', e => {
     const lab = $(`[data-val="${p}"]`); if (lab) lab.textContent = fmt(v, +t.dataset.step) + (t.dataset.unit ? ' ' + t.dataset.unit : '');
   }
   if (t.type === 'checkbox' && ['plate.guard', 'pattern.twoTone', 'pattern.image.auto'].includes(p)) render();
-  if (p.startsWith('colors.')) { viewer.setColors(P.colors, P.pattern.twoTone); document.documentElement.style.setProperty('--accent', P.colors.bumper); save(); drawEditor(); return; }
+  if (p.startsWith('colors.')) { viewer.setColors(P.colors, P.pattern.twoTone); applyAccent(); save(); drawEditor(); return; }
   if (p === 'pattern.twoTone') viewer.setColors(P.colors, P.pattern.twoTone);
   if (p.startsWith('phone.')) drawEditor();
   schedule();
@@ -518,7 +519,7 @@ async function action(a) {
     };
     download(zip(files), 'casestudio-preset-a1-mini.zip');
   } else if (a === 'fit') {
-    setStatus('Preparo l\'anello di prova…', 'busy');
+    setStatus('Preparo l\'anello di prova', 'busy');
     const r = await request(true);
     if (r.error) return setStatus(r.error, 'err');
     download(stl(r.bumper, 'fit-test'), `${base}-anello-di-prova.stl`);
@@ -528,9 +529,21 @@ async function action(a) {
   }
 }
 
+// ---------- accento: il colore del filamento, reso leggibile ----------
+function lum(hex) { const c = hex.replace('#', ''), v = [0, 2, 4].map(i => parseInt(c.slice(i, i + 2), 16) / 255).map(u => u <= 0.03928 ? u / 12.92 : ((u + 0.055) / 1.055) ** 2.4); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+function mix(hex, to, t) { const p = h => [0, 2, 4].map(i => parseInt(h.slice(1 + i, 3 + i), 16)); const a = p(hex), b = p(to); return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+function applyAccent() {
+  const base = P.colors.bumper; let ui = base, t = 0;
+  while (contrast(ui, '#f4f5f6') < 3.2 && t < 1) { t += 0.1; ui = mix(base, '#1c2328', t); }
+  const root = document.documentElement.style;
+  root.setProperty('--accent', base); root.setProperty('--accent-ui', ui);
+  root.setProperty('--on-accent', contrast(ui, '#ffffff') >= 4.5 ? '#ffffff' : '#1c2328');
+}
+
 // ---------- avvio ----------
 window.csopen = { viewer, get state() { return P; } };
 render();
 viewer.view('angle');
-document.documentElement.style.setProperty('--accent', P.colors.bumper);
+applyAccent();
 schedule(10);

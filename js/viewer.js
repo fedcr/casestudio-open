@@ -9,24 +9,31 @@ export class Viewer {
     this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.r.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.r.toneMapping = THREE.ACESFilmicToneMapping;
-    this.r.toneMappingExposure = 0.9;
+    this.r.toneMappingExposure = 0.95;
+    this.r.shadowMap.enabled = true; this.r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
     const pm = new THREE.PMREMGenerator(this.r);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     this.scene.environmentIntensity = 0.65;
     this.cam = new THREE.PerspectiveCamera(32, 1, 1, 2000);
-    this.cam.position.set(60, -150, 260);
+    this.cam.position.set(150, 210, 250);
     this.ctl = new OrbitControls(this.cam, canvas);
     this.ctl.enableDamping = true; this.ctl.dampingFactor = 0.08;
     this.ctl.minDistance = 80; this.ctl.maxDistance = 700;
-    const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(-120, 200, 260); this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x9ec5ff, 0.8); rim.position.set(200, -100, -120); this.scene.add(rim);
+    // luce da banco: una principale dall'alto che proietta l'ombra sul piano, una di riempimento neutra
+    const key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(-70, 320, 140); key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -130, right: 130, top: 130, bottom: -130, near: 50, far: 700 });
+    key.shadow.radius = 6; key.shadow.bias = -0.0004; this.scene.add(key);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.45); fill.position.set(220, 120, -160); this.scene.add(fill);
+    this.scene.add(makeBed());
 
-    this.group = new THREE.Group(); this.scene.add(this.group);
+    // la cover sta sul piano come si stampa: fronte in basso (z modello -> y mondo)
+    this.group = new THREE.Group(); this.group.rotation.x = -Math.PI / 2; this.scene.add(this.group);
     this.bumperMat = new THREE.MeshPhysicalMaterial({ color: 0x3d8bff, roughness: 0.55, metalness: 0, clearcoat: 0.15, vertexColors: false });
     this.plateMat = new THREE.MeshPhysicalMaterial({ roughness: 0.38, metalness: 0, clearcoat: 0.5, clearcoatRoughness: 0.35, vertexColors: true });
     this.bumperMesh = new THREE.Mesh(new THREE.BufferGeometry(), this.bumperMat);
     this.plateMesh = new THREE.Mesh(new THREE.BufferGeometry(), this.plateMat);
+    this.bumperMesh.castShadow = this.plateMesh.castShadow = true;
     this.group.add(this.bumperMesh, this.plateMesh);
     this.phoneMesh = null;
     this.explode = 0; this.zp0 = 0; this.target = 0;
@@ -38,7 +45,9 @@ export class Viewer {
   }
   resize() {
     const p = this.canvas.parentElement, w = p.clientWidth, h = p.clientHeight;
-    this.r.setSize(w, h, false); this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+    this.r.setSize(w, h, false); this.cam.aspect = w / h;
+    this.cam.zoom = w < 900 ? Math.max(0.45, Math.min(1, w / 820)) : 1; // su schermi stretti mostra tutta la cover
+    this.cam.updateProjectionMatrix();
     // tieni il modello a sinistra del pannello su desktop
     // sposta il centro del modello a sinistra del pannello (desktop) o sopra di esso (mobile)
     if (w > 900) this.cam.setViewOffset(w, h, 200, 0, w, h);
@@ -74,8 +83,9 @@ export class Viewer {
     this.plateMesh.geometry = this.geo(plate, z => (this.twoTone && z > meta.plateT + 0.15 && meta.relief > 0) ? this.colors.relief : this.colors.plate);
     // centra
     this.bumperMesh.position.set(0, 0, 0);
-    this.group.position.set(0, 0, -meta.Z / 2);
-    this.ctl.target.set(0, 0, 0);
+    this.group.position.set(0, 0.05, 0);
+    this.Z = meta.Z;
+    if (!this.framed) { this.ctl.target.set(0, meta.Z / 2, 0); this.framed = true; }
   }
   setColors({ bumper, plate, relief }, twoTone) {
     this.bumperMat.color.set(bumper);
@@ -119,9 +129,9 @@ export class Viewer {
     this.phoneMesh = m; this.group.add(m);
   }
   view(name) {
-    const d = 330;
-    const p = { back: [0, 0, d], front: [0, 0, -d], angle: [60, -150, 260], side: [d, 0, 0], top: [0, d, 0.01] }[name] || [60, -150, 260];
-    this.cam.position.set(...p); this.ctl.target.set(0, 0, 0); this.ctl.update();
+    const d = 360, t = (this.Z || 12) / 2;
+    const p = { back: [0, d, 0.01], front: [0, -d, 0.01], angle: [150, 210, 250], side: [d, t + 30, 0] }[name] || [150, 210, 250];
+    this.cam.position.set(...p); this.ctl.target.set(0, name === 'front' ? 0 : t, 0); this.ctl.update();
   }
   screenshot() { this.r.render(this.scene, this.cam); return this.canvas.toDataURL('image/png'); }
 }
@@ -163,4 +173,33 @@ function creased(buf, crease) {
   g.setAttribute('position', new THREE.BufferAttribute(P, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
   return g;
+}
+
+// Piano di stampa dell'A1 mini, 180 x 180 mm, PEI testurizzato in scala reale.
+function makeBed() {
+  const S = 180, r = 5, n = 1024;
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const x = c.getContext('2d');
+  x.fillStyle = '#7b6446'; x.fillRect(0, 0, n, n);
+  // grana del PEI testurizzato: rumore fine, niente griglia (il piano vero non ne ha)
+  const img = x.getImageData(0, 0, n, n), d = img.data;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < d.length; i += 4) { const k = (rnd() - 0.5) * 34; d[i] += k; d[i + 1] += k * 0.9; d[i + 2] += k * 0.75; }
+  x.putImageData(img, 0, 0);
+  // bordo non stampabile, leggermente piu' scuro
+  x.strokeStyle = 'rgba(30, 22, 12, .35)'; x.lineWidth = 10; x.strokeRect(5, 5, n - 10, n - 10);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const sh = new THREE.Shape(), h = S / 2;
+  sh.moveTo(-h + r, -h); sh.lineTo(h - r, -h); sh.absarc(h - r, -h + r, r, -Math.PI / 2, 0); sh.lineTo(h, h - r);
+  sh.absarc(h - r, h - r, r, 0, Math.PI / 2); sh.lineTo(-h + r, h); sh.absarc(-h + r, h - r, r, Math.PI / 2, Math.PI);
+  sh.lineTo(-h, -h + r); sh.absarc(-h + r, -h + r, r, Math.PI, Math.PI * 1.5);
+  const g = new THREE.ShapeGeometry(sh, 12), pos = g.attributes.position, uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getX(i) + h) / S; uv[i * 2 + 1] = (pos.getY(i) + h) / S; }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.1 }));
+  m.receiveShadow = true;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(S + 4, 3, S + 4), new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.6 }));
+  base.position.y = -1.55; base.receiveShadow = true;
+  const grp = new THREE.Group(); grp.add(base, m); return grp;
 }
