@@ -1,65 +1,190 @@
 // Database telefoni.
-// Dimensioni W x H x T (mm): verificate su Wikipedia/schede ufficiali (iPhone 16/17, Galaxy S24/S25/S26, Pixel 10).
-// Fotocamere: lista di forme viste da DIETRO, x/y = CENTRO misurato dall'angolo in alto a sinistra.
-//   t:'r' rettangolo arrotondato (w,h,r)   t:'c' cerchio (w = diametro)
-// Tasti: lato visto da DAVANTI ('right' | 'left'), y = distanza dal bordo superiore al centro, len = lunghezza.
-// Le posizioni di fotocamere e tasti sono APPROSSIMATE: correggile con l'editor visuale (scheda Telefono).
+// Apple e Samsung: profilo, raggio angoli, fotocamere, tasti e fori inferiori MISURATI da cover in STL
+// pubblicate su Printables (fonte indicata in "src"); dimensioni W x H x T dalle schede ufficiali.
+// Le cover hanno 0,2 mm di gioco: le misure qui sono gia' corrette per riportarle al telefono.
+// Fotocamere: forme viste da DIETRO, x/y = centro dall'angolo in alto a sinistra (mm).
+// Tasti: lato visto da DAVANTI ('right' | 'left'), y = centro dal bordo superiore, len = lunghezza.
+//   cut: true = sempre forato (es. Camera Control, sensibile al tocco).
+// bottom: fori sul lato inferiore, x = centro rispetto all'asse (vista da dietro), len e h in mm.
+// outer: 'sharp' = angoli esterni vivi come il telefono.
 
 const R = (x, y, w, h, r) => ({ t: 'r', x, y, w, h, r });
 const C = (x, y, d) => ({ t: 'c', x, y, w: d, h: d, r: d / 2 });
 const B = (side, y, len) => ({ side, y, len });
-
-const ipBtns = (h, big) => {
-  const k = h / 147.6;
-  return [B('right', 58 * k, 18), B('left', 27 * k, 8), B('left', 44 * k, 11.5), B('left', 60 * k, 11.5)];
-};
-const ipCtl = (y) => B('right', y, 10);
-
-// disposizioni camera
-const camIp15 = [R(19.5, 19.5, 31, 31, 9)];
-const camIp16 = [R(15.5, 21.5, 21.5, 33, 10.5)];
-const camPro = [R(22, 22, 37, 37.5, 10)];
-const camSam3 = [C(15.3, 14, 13.2), C(15.3, 31.3, 13.2), C(15.3, 48.6, 13.2), C(30, 15, 5)];
-const camUltra = [C(16.5, 15.5, 14.2), C(16.5, 33.7, 14.2), C(16.5, 51.9, 14.2), C(16.5, 70.1, 14.2), C(31.5, 17, 5), C(31.5, 28, 5)];
 const camPixel = (W) => [R(W / 2, 27, W - 1, 24, 12)];
+const pxBottom = [{ x: 0, len: 40, h: 6 }];
+
+const MEASURED = [{"id": "ip15", "brand": "Apple", "name": "iPhone 15", "W": 71.6, "H": 147.6, "T": 7.8, "R": 10.0, "cams": [{"t": "r", "x": 19.3, "y": 19.2, "w": 34.4, "h": 34.4, "r": 11.7}], "buttons": [{"side": "left", "y": 31.5, "len": 7.8},
+  {"side": "left", "y": 44.4, "len": 11.5},
+  {"side": "left", "y": 59.0, "len": 11.5},
+  {"side": "right", "y": 52.5, "len": 17.5}], "bottom": [{"x": 15.0, "len": 10, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -15.5, "len": 12, "h": 2.6}], "src": "Cover Flipper3DPrints #592404 e TyChi04 #1156348 (Printables)"},
+  {"id": "ip15p", "brand": "Apple", "name": "iPhone 15 Plus", "W": 77.8, "H": 160.9, "T": 7.8, "R": 10.3, "cams": [{"t": "r", "x": 19.3, "y": 19.2, "w": 34.4, "h": 34.4, "r": 11.7}], "buttons": [{"side": "left", "y": 31.5, "len": 7.8},
+  {"side": "left", "y": 44.4, "len": 11.5},
+  {"side": "left", "y": 59.0, "len": 11.5},
+  {"side": "right", "y": 52.5, "len": 17.5}], "bottom": [{"x": 15.0, "len": 10, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -15.5, "len": 12, "h": 2.6}], "src": "Cover Flipper3DPrints #592404 e TyChi04 #1156348 (Printables)"},
+  {"id": "ip15pro", "brand": "Apple", "name": "iPhone 15 Pro", "W": 70.6, "H": 146.6, "T": 8.25, "R": 9.1, "cams": [{"t": "r", "x": 23.2, "y": 24.2, "w": 37.0, "h": 38.2, "r": 9.4}], "buttons": [{"side": "left", "y": 31.5, "len": 7.8},
+  {"side": "left", "y": 44.4, "len": 11.5},
+  {"side": "left", "y": 59.0, "len": 11.5},
+  {"side": "right", "y": 52.5, "len": 17.5}], "bottom": [{"x": 15.0, "len": 10, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -15.5, "len": 12, "h": 2.6}], "src": "Tasti da cover iPhone 15, fotocamera da iPhone 16 Pro", "approx": true},
+  {"id": "ip15pm", "brand": "Apple", "name": "iPhone 15 Pro Max", "W": 76.7, "H": 159.9, "T": 8.25, "R": 9.0, "cams": [{"t": "r", "x": 23.1, "y": 24.1, "w": 36.8, "h": 38.0, "r": 9.6}], "buttons": [{"side": "left", "y": 31.5, "len": 7.8},
+  {"side": "left", "y": 44.4, "len": 11.5},
+  {"side": "left", "y": 59.0, "len": 11.5},
+  {"side": "right", "y": 52.5, "len": 17.5}], "bottom": [{"x": 15.0, "len": 10, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -15.5, "len": 12, "h": 2.6}], "src": "Tasti da cover iPhone 15, fotocamera da iPhone 16 Pro Max", "approx": true},
+  {"id": "ip16", "brand": "Apple", "name": "iPhone 16", "W": 71.6, "H": 147.6, "T": 7.8, "R": 9.0, "cams": [{"t": "r", "x": 13.5, "y": 22.6, "w": 19.6, "h": 36.8, "r": 9.8},
+  {"t": "c", "x": 29.9, "y": 22.6, "w": 7.8, "h": 7.8, "r": 3.9}], "buttons": [{"side": "left", "y": 33.9, "len": 8.5},
+  {"side": "left", "y": 48.0, "len": 9.8},
+  {"side": "left", "y": 62.2, "len": 9.8},
+  {"side": "right", "y": 55.2, "len": 16.6},
+  {"side": "right", "y": 96.0, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 13.8, "len": 7.4, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -16.1, "len": 12.0, "h": 2.6}], "src": "Cover Victronix, Printables #1012139"},
+  {"id": "ip16p", "brand": "Apple", "name": "iPhone 16 Plus", "W": 77.8, "H": 160.9, "T": 7.8, "R": 8.9, "cams": [{"t": "r", "x": 13.5, "y": 22.4, "w": 19.6, "h": 36.6, "r": 9.6},
+  {"t": "c", "x": 30.0, "y": 22.5, "w": 7.8, "h": 7.8, "r": 3.9}], "buttons": [{"side": "left", "y": 33.8, "len": 8.3},
+  {"side": "left", "y": 48.0, "len": 9.8},
+  {"side": "left", "y": 62.2, "len": 9.8},
+  {"side": "right", "y": 54.9, "len": 16.4},
+  {"side": "right", "y": 109.3, "len": 17.3, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 16.1, "len": 10.2, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -18.6, "len": 15.2, "h": 2.6}], "src": "Cover Victronix, Printables #1012139"},
+  {"id": "ip16pro", "brand": "Apple", "name": "iPhone 16 Pro", "W": 71.5, "H": 149.6, "T": 8.25, "R": 9.1, "cams": [{"t": "r", "x": 23.2, "y": 24.2, "w": 37.0, "h": 38.2, "r": 9.4}], "buttons": [{"side": "left", "y": 34.4, "len": 8.3},
+  {"side": "left", "y": 48.4, "len": 9.8},
+  {"side": "left", "y": 62.6, "len": 9.8},
+  {"side": "right", "y": 55.6, "len": 16.6},
+  {"side": "right", "y": 98.4, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 13.9, "len": 7.6, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.4},
+  {"x": -16.0, "len": 12.2, "h": 2.6}], "src": "Cover Victronix, Printables #1012139"},
+  {"id": "ip16pm", "brand": "Apple", "name": "iPhone 16 Pro Max", "W": 77.6, "H": 163.0, "T": 8.25, "R": 9.0, "cams": [{"t": "r", "x": 23.1, "y": 24.1, "w": 36.8, "h": 38.0, "r": 9.6}], "buttons": [{"side": "left", "y": 34.3, "len": 8.1},
+  {"side": "left", "y": 48.4, "len": 9.8},
+  {"side": "left", "y": 62.6, "len": 9.8},
+  {"side": "right", "y": 55.6, "len": 16.6},
+  {"side": "right", "y": 112.0, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 15.4, "len": 9.8, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.4},
+  {"x": -17.6, "len": 14.2, "h": 2.6}], "src": "Cover Victronix, Printables #1012139"},
+  {"id": "ip17", "brand": "Apple", "name": "iPhone 17", "W": 71.5, "H": 149.6, "T": 7.95, "R": 8.7, "cams": [{"t": "r", "x": 13.6, "y": 22.6, "w": 19.4, "h": 36.8, "r": 9.5},
+  {"t": "c", "x": 30.5, "y": 22.5, "w": 8.0, "h": 8.0, "r": 4.0}], "buttons": [{"side": "left", "y": 33.9, "len": 8.5},
+  {"side": "left", "y": 48.0, "len": 9.8},
+  {"side": "left", "y": 62.2, "len": 9.8},
+  {"side": "right", "y": 55.1, "len": 16.4},
+  {"side": "right", "y": 98.1, "len": 17.3, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 13.7, "len": 7.6, "h": 2.8},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -16.0, "len": 12.2, "h": 2.8}], "src": "Cover Victronix, Printables #1412457"},
+  {"id": "ipair", "brand": "Apple", "name": "iPhone Air", "W": 74.7, "H": 156.2, "T": 5.64, "R": 8.6, "cams": [{"t": "r", "x": 37.1, "y": 16.3, "w": 64.4, "h": 23.2, "r": 11.5}], "buttons": [{"side": "left", "y": 33.9, "len": 8.5},
+  {"side": "left", "y": 48.0, "len": 9.8},
+  {"side": "left", "y": 62.2, "len": 9.8},
+  {"side": "right", "y": 55.1, "len": 16.4},
+  {"side": "right", "y": 104.7, "len": 16.9, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 12.1, "len": 5.2, "h": 2.6},
+  {"x": 0, "len": 15, "h": 8.4},
+  {"x": -11.9, "len": 5.2, "h": 2.6}], "src": "Cover Victronix, Printables #1412457"},
+  {"id": "ip17pro", "brand": "Apple", "name": "iPhone 17 Pro", "W": 71.9, "H": 150.0, "T": 8.75, "R": 8.7, "cams": [{"t": "r", "x": 35.8, "y": 24.1, "w": 61.4, "h": 38.0, "r": 9.6}], "buttons": [{"side": "left", "y": 34.1, "len": 8.5},
+  {"side": "left", "y": 48.2, "len": 9.8},
+  {"side": "left", "y": 62.4, "len": 9.8},
+  {"side": "right", "y": 55.3, "len": 16.4},
+  {"side": "right", "y": 98.4, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 16.0, "len": 12.2, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.2},
+  {"x": -16.0, "len": 12.2, "h": 2.6}], "src": "Cover Victronix, Printables #1412457"},
+  {"id": "ip17pm", "brand": "Apple", "name": "iPhone 17 Pro Max", "W": 78.0, "H": 163.4, "T": 8.75, "R": 8.6, "cams": [{"t": "r", "x": 38.9, "y": 24.1, "w": 67.6, "h": 38.0, "r": 9.6}], "buttons": [{"side": "left", "y": 34.1, "len": 8.5},
+  {"side": "left", "y": 48.2, "len": 9.8},
+  {"side": "left", "y": 62.4, "len": 9.8},
+  {"side": "right", "y": 55.3, "len": 16.4},
+  {"side": "right", "y": 111.8, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 17.1, "len": 14.4, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.2},
+  {"x": -17.1, "len": 14.4, "h": 2.6}], "src": "Cover Victronix, Printables #1412457"},
+  {"id": "ip18pro", "brand": "Apple", "name": "iPhone 18 Pro", "W": 71.9, "H": 150.0, "T": 8.75, "R": 8.6, "cams": [{"t": "r", "x": 35.8, "y": 24.1, "w": 61.4, "h": 38.0, "r": 9.7}], "buttons": [{"side": "left", "y": 34.0, "len": 8.3},
+  {"side": "left", "y": 48.2, "len": 9.8},
+  {"side": "left", "y": 62.4, "len": 9.8},
+  {"side": "right", "y": 55.3, "len": 16.4},
+  {"side": "right", "y": 98.3, "len": 17.3, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 16.9, "len": 12.8, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.2},
+  {"x": -16.7, "len": 12.8, "h": 2.6}], "src": "Cover Victronix, Printables #1839716"},
+  {"id": "ip18pm", "brand": "Apple", "name": "iPhone 18 Pro Max", "W": 78.0, "H": 163.4, "T": 8.75, "R": 8.6, "cams": [{"t": "r", "x": 38.9, "y": 24.1, "w": 67.6, "h": 38.0, "r": 9.6}], "buttons": [{"side": "left", "y": 34.1, "len": 8.5},
+  {"side": "left", "y": 48.2, "len": 9.8},
+  {"side": "left", "y": 62.4, "len": 9.8},
+  {"side": "right", "y": 55.3, "len": 16.4},
+  {"side": "right", "y": 111.8, "len": 17.5, "cut": true, "name": "Camera Control"}], "bottom": [{"x": 17.1, "len": 14.4, "h": 2.6},
+  {"x": 0.0, "len": 15.0, "h": 8.2},
+  {"x": -17.1, "len": 14.4, "h": 2.6}], "src": "Cover Victronix, Printables #1839716"},
+  {"id": "s24", "brand": "Samsung", "name": "Galaxy S24", "W": 70.6, "H": 147.0, "T": 7.6, "R": 7.1, "cams": [{"t": "c", "x": 12.8, "y": 12.8, "w": 13.4, "h": 13.4, "r": 6.7},
+  {"t": "c", "x": 12.8, "y": 28.8, "w": 13.4, "h": 13.4, "r": 6.7},
+  {"t": "c", "x": 12.8, "y": 44.9, "w": 13.3, "h": 13.3, "r": 6.65},
+  {"t": "c", "x": 26.5, "y": 20.8, "w": 4.7, "h": 4.7, "r": 2.35}], "buttons": [{"side": "right", "y": 36.5, "len": 20},
+  {"side": "right", "y": 61.6, "len": 11}], "bottom": [{"x": 1.0, "len": 15.4, "h": 6.8},
+  {"x": -15.8, "len": 10.6, "h": 2.6}], "src": "Cover Victronix, Printables #1034176"},
+  {"id": "s24p", "brand": "Samsung", "name": "Galaxy S24+", "W": 75.9, "H": 158.5, "T": 7.7, "R": 6.8, "cams": [{"t": "c", "x": 12.9, "y": 12.9, "w": 14.0, "h": 14.0, "r": 7.0},
+  {"t": "c", "x": 12.9, "y": 30.1, "w": 14.0, "h": 14.0, "r": 7.0},
+  {"t": "c", "x": 12.9, "y": 47.3, "w": 14.0, "h": 14.0, "r": 7.0},
+  {"t": "c", "x": 26.7, "y": 21.5, "w": 4.8, "h": 4.8, "r": 2.4}], "buttons": [{"side": "right", "y": 38.5, "len": 20},
+  {"side": "right", "y": 63.5, "len": 10.8}], "bottom": [{"x": 0.8, "len": 15.4, "h": 6.8},
+  {"x": -15.9, "len": 10.8, "h": 2.6}], "src": "Cover Victronix, Printables #1034176"},
+  {"id": "s24u", "brand": "Samsung", "name": "Galaxy S24 Ultra", "W": 79.0, "H": 162.3, "T": 8.6, "R": 2.8, "cams": [{"t": "c", "x": 14.9, "y": 13.9, "w": 15.2, "h": 15.2, "r": 7.6},
+  {"t": "c", "x": 14.9, "y": 32.2, "w": 15.1, "h": 15.1, "r": 7.55},
+  {"t": "c", "x": 14.9, "y": 50.4, "w": 15.1, "h": 15.1, "r": 7.55},
+  {"t": "c", "x": 31.8, "y": 13.9, "w": 9.1, "h": 9.1, "r": 4.55},
+  {"t": "c", "x": 31.8, "y": 23.0, "w": 3.8, "h": 3.8, "r": 1.9},
+  {"t": "c", "x": 31.8, "y": 32.2, "w": 9.0, "h": 9.0, "r": 4.5}], "buttons": [{"side": "right", "y": 41.0, "len": 21},
+  {"side": "right", "y": 66.6, "len": 11}], "bottom": [{"x": 32.6, "len": 11.0, "h": 8.4},
+  {"x": 16.8, "len": 11.0, "h": 2.6},
+  {"x": 0.1, "len": 13.6, "h": 6.8}], "src": "Cover Victronix, Printables #1034176", "outer": "sharp"},
+  {"id": "s25", "brand": "Samsung", "name": "Galaxy S25", "W": 70.5, "H": 146.9, "T": 7.2, "R": 7.1, "cams": [{"t": "c", "x": 12.8, "y": 12.7, "w": 13.7, "h": 13.7, "r": 6.85},
+  {"t": "c", "x": 12.8, "y": 28.8, "w": 13.8, "h": 13.8, "r": 6.9},
+  {"t": "c", "x": 12.8, "y": 44.8, "w": 13.8, "h": 13.8, "r": 6.9},
+  {"t": "c", "x": 26.9, "y": 20.8, "w": 4.7, "h": 4.7, "r": 2.35}], "buttons": [{"side": "right", "y": 36.5, "len": 20},
+  {"side": "right", "y": 61.6, "len": 11}], "bottom": [{"x": 0.7, "len": 15.2, "h": 7.2},
+  {"x": -15.8, "len": 10.6, "h": 2.6}], "src": "Cover Victronix, Printables #1166535"},
+  {"id": "s25p", "brand": "Samsung", "name": "Galaxy S25+", "W": 75.8, "H": 158.4, "T": 7.3, "R": 6.8, "cams": [{"t": "c", "x": 13.0, "y": 12.9, "w": 14.8, "h": 14.8, "r": 7.4},
+  {"t": "c", "x": 13.1, "y": 29.9, "w": 14.8, "h": 14.8, "r": 7.4},
+  {"t": "c", "x": 13.0, "y": 46.9, "w": 14.8, "h": 14.8, "r": 7.4},
+  {"t": "c", "x": 27.7, "y": 21.5, "w": 4.8, "h": 4.8, "r": 2.4}], "buttons": [{"side": "right", "y": 38.2, "len": 19.8},
+  {"side": "right", "y": 63.1, "len": 10.8}], "bottom": [{"x": 0.8, "len": 15.4, "h": 7.2},
+  {"x": -15.9, "len": 10.8, "h": 2.6}], "src": "Cover Victronix, Printables #1166535"},
+  {"id": "s25e", "brand": "Samsung", "name": "Galaxy S25 Edge", "W": 75.6, "H": 158.2, "T": 5.8, "R": 6.5, "cams": [{"t": "r", "x": 13.6, "y": 22.0, "w": 17.6, "h": 33.0, "r": 8.8},
+  {"t": "c", "x": 29.0, "y": 15.0, "w": 4.7, "h": 4.7, "r": 2.35}], "buttons": [{"side": "right", "y": 38.2, "len": 19.8},
+  {"side": "right", "y": 63.1, "len": 10.8}], "bottom": [{"x": 0.8, "len": 15.4, "h": 7.2},
+  {"x": -15.9, "len": 10.8, "h": 2.6}], "src": "Profilo da bumper Victronix #1166535; fotocamere e tasti stimati", "approx": true},
+  {"id": "s25u", "brand": "Samsung", "name": "Galaxy S25 Ultra", "W": 77.6, "H": 162.8, "T": 8.2, "R": 4.6, "cams": [{"t": "c", "x": 14.2, "y": 14.3, "w": 15.9, "h": 15.9, "r": 7.95},
+  {"t": "c", "x": 14.2, "y": 32.5, "w": 15.9, "h": 15.9, "r": 7.95},
+  {"t": "c", "x": 14.2, "y": 50.7, "w": 15.9, "h": 15.9, "r": 7.95},
+  {"t": "c", "x": 31.0, "y": 14.2, "w": 9.0, "h": 9.0, "r": 4.5},
+  {"t": "c", "x": 31.0, "y": 23.4, "w": 3.8, "h": 3.8, "r": 1.9},
+  {"t": "c", "x": 31.0, "y": 32.5, "w": 8.9, "h": 8.9, "r": 4.45}], "buttons": [{"side": "right", "y": 41.4, "len": 21},
+  {"side": "right", "y": 67.3, "len": 11.6}], "bottom": [{"x": 31.7, "len": 11, "h": 8.4},
+  {"x": 18.2, "len": 9.6, "h": 2.6},
+  {"x": 0.1, "len": 14.2, "h": 7.2}], "src": "Cover Victronix, Printables #1166535", "note": "Foro S Pen stimato dalla cover S24 Ultra", "outer": "sharp"},
+  {"id": "s26", "brand": "Samsung", "name": "Galaxy S26", "W": 71.7, "H": 149.6, "T": 7.2, "R": 6.3, "cams": [{"t": "r", "x": 14.1, "y": 29.9, "w": 17.6, "h": 51.6, "r": 8.8},
+  {"t": "c", "x": 29.5, "y": 22.0, "w": 4.7, "h": 4.7, "r": 2.35}], "buttons": [{"side": "right", "y": 35.9, "len": 20.4},
+  {"side": "right", "y": 62.1, "len": 13.2}], "bottom": [{"x": 0.9, "len": 15.4, "h": 7.2},
+  {"x": -14.6, "len": 12.0, "h": 2.6}], "src": "Cover Victronix, Printables #1621022"},
+  {"id": "s26p", "brand": "Samsung", "name": "Galaxy S26+", "W": 75.8, "H": 158.4, "T": 7.3, "R": 6.4, "cams": [{"t": "r", "x": 13.5, "y": 29.8, "w": 17.6, "h": 51.6, "r": 8.8},
+  {"t": "c", "x": 29.1, "y": 21.8, "w": 4.7, "h": 4.7, "r": 2.35}], "buttons": [{"side": "right", "y": 35.9, "len": 20.4},
+  {"side": "right", "y": 62.1, "len": 13.6}], "bottom": [{"x": 0.9, "len": 15.6, "h": 7.2},
+  {"x": -16.7, "len": 12.0, "h": 2.6}], "src": "Cover Victronix, Printables #1621022"},
+  {"id": "s26u", "brand": "Samsung", "name": "Galaxy S26 Ultra", "W": 78.1, "H": 163.6, "T": 7.9, "R": 6.3, "cams": [{"t": "r", "x": 14.9, "y": 33.1, "w": 19.6, "h": 56.6, "r": 9.8},
+  {"t": "c", "x": 32.9, "y": 14.9, "w": 8.8, "h": 8.8, "r": 4.4},
+  {"t": "c", "x": 32.9, "y": 24.1, "w": 4.8, "h": 4.8, "r": 2.4},
+  {"t": "c", "x": 32.9, "y": 33.1, "w": 8.8, "h": 8.8, "r": 4.4}], "buttons": [{"side": "right", "y": 40.7, "len": 20.4},
+  {"side": "right", "y": 67.0, "len": 13.4}], "bottom": [{"x": 31.9, "len": 11, "h": 8.4},
+  {"x": 17.6, "len": 12.0, "h": 2.6},
+  {"x": -0.8, "len": 15.6, "h": 7.2}], "src": "Cover Victronix, Printables #1621022", "note": "Foro S Pen stimato dalla cover S24 Ultra"}];
 
 export const PHONES = [
-  // ---------- Apple ----------
-  { id: 'ip15', brand: 'Apple', name: 'iPhone 15', W: 71.6, H: 147.6, T: 7.8, R: 10.5, cams: camIp15, buttons: ipBtns(147.6), bottom: { x: 0, len: 38 } },
-  { id: 'ip15p', brand: 'Apple', name: 'iPhone 15 Plus', W: 77.8, H: 160.9, T: 7.8, R: 11, cams: [R(21, 19.5, 31, 31, 9)], buttons: ipBtns(160.9), bottom: { x: 0, len: 38 } },
-  { id: 'ip15pro', brand: 'Apple', name: 'iPhone 15 Pro', W: 70.6, H: 146.6, T: 8.25, R: 10, cams: camPro, buttons: ipBtns(146.6), bottom: { x: 0, len: 38 } },
-  { id: 'ip15pm', brand: 'Apple', name: 'iPhone 15 Pro Max', W: 76.7, H: 159.9, T: 8.25, R: 10.5, cams: [R(22, 22, 37, 37.5, 10)], buttons: ipBtns(159.9), bottom: { x: 0, len: 38 } },
-  { id: 'ip16', brand: 'Apple', name: 'iPhone 16', W: 71.6, H: 147.6, T: 7.8, R: 10.5, cams: camIp16, buttons: [...ipBtns(147.6), ipCtl(96)], bottom: { x: 0, len: 38 } },
-  { id: 'ip16p', brand: 'Apple', name: 'iPhone 16 Plus', W: 77.8, H: 160.9, T: 7.8, R: 11, cams: camIp16, buttons: [...ipBtns(160.9), ipCtl(104)], bottom: { x: 0, len: 38 } },
-  { id: 'ip16pro', brand: 'Apple', name: 'iPhone 16 Pro', W: 71.5, H: 149.6, T: 8.25, R: 10.5, cams: camPro, buttons: [...ipBtns(149.6), ipCtl(98)], bottom: { x: 0, len: 38 } },
-  { id: 'ip16pm', brand: 'Apple', name: 'iPhone 16 Pro Max', W: 77.6, H: 163.0, T: 8.25, R: 11, cams: [R(22, 22, 37, 37.5, 10)], buttons: [...ipBtns(163), ipCtl(106)], bottom: { x: 0, len: 38 } },
-  { id: 'ip17', brand: 'Apple', name: 'iPhone 17', W: 71.5, H: 149.6, T: 7.95, R: 10.5, cams: camIp16, buttons: [...ipBtns(149.6), ipCtl(98)], bottom: { x: 0, len: 38 } },
-  { id: 'ipair', brand: 'Apple', name: 'iPhone Air', W: 74.7, H: 156.2, T: 5.64, R: 10.5, approx: true, cams: [R(37.35, 16, 70, 23, 9)], buttons: [B('right', 60, 18), ipCtl(100), B('left', 30, 8), B('left', 46, 11.5), B('left', 62, 11.5)], bottom: { x: 0, len: 36 } },
-  { id: 'ip17pro', brand: 'Apple', name: 'iPhone 17 Pro', W: 71.9, H: 150.0, T: 8.75, R: 10.5, approx: true, cams: [R(35.95, 21, 71, 40, 9)], buttons: [...ipBtns(150), ipCtl(98)], bottom: { x: 0, len: 38 } },
-  { id: 'ip17pm', brand: 'Apple', name: 'iPhone 17 Pro Max', W: 78.0, H: 163.4, T: 8.75, R: 11, approx: true, cams: [R(39, 21, 77, 40, 9)], buttons: [...ipBtns(163.4), ipCtl(106)], bottom: { x: 0, len: 38 } },
-
-  // ---------- Samsung ----------
-  { id: 's24', brand: 'Samsung', name: 'Galaxy S24', W: 70.6, H: 147.0, T: 7.6, R: 9.5, cams: camSam3, buttons: [B('right', 42, 22), B('right', 65, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's24p', brand: 'Samsung', name: 'Galaxy S24+', W: 75.9, H: 158.5, T: 7.7, R: 10, cams: camSam3, buttons: [B('right', 46, 22), B('right', 70, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's24u', brand: 'Samsung', name: 'Galaxy S24 Ultra', W: 79.0, H: 162.3, T: 8.6, R: 4.5, cams: camUltra, buttons: [B('right', 52, 24), B('right', 78, 13)], bottom: { x: 0, len: 62 } },
-  { id: 's25', brand: 'Samsung', name: 'Galaxy S25', W: 70.5, H: 146.9, T: 7.2, R: 9.5, cams: camSam3, buttons: [B('right', 42, 22), B('right', 65, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's25p', brand: 'Samsung', name: 'Galaxy S25+', W: 75.8, H: 158.4, T: 7.3, R: 10, cams: camSam3, buttons: [B('right', 46, 22), B('right', 70, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's25u', brand: 'Samsung', name: 'Galaxy S25 Ultra', W: 77.6, H: 162.8, T: 8.2, R: 4.5, cams: camUltra, buttons: [B('right', 52, 24), B('right', 78, 13)], bottom: { x: 0, len: 62 } },
-  { id: 's25e', brand: 'Samsung', name: 'Galaxy S25 Edge', W: 75.6, H: 158.2, T: 5.8, R: 10, cams: [C(15.3, 14, 13.2), C(15.3, 31.3, 13.2), C(30, 15, 5)], buttons: [B('right', 46, 22), B('right', 70, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's26', brand: 'Samsung', name: 'Galaxy S26', W: 71.7, H: 149.6, T: 7.2, R: 10, cams: camSam3, buttons: [B('right', 42, 22), B('right', 65, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's26p', brand: 'Samsung', name: 'Galaxy S26+', W: 75.8, H: 158.4, T: 7.3, R: 10, cams: camSam3, buttons: [B('right', 46, 22), B('right', 70, 12)], bottom: { x: 0, len: 40 } },
-  { id: 's26u', brand: 'Samsung', name: 'Galaxy S26 Ultra', W: 78.1, H: 163.6, T: 7.9, R: 5, cams: camUltra, buttons: [B('right', 52, 24), B('right', 78, 13)], bottom: { x: 0, len: 62 } },
-
+  ...MEASURED,
   // ---------- Google ----------
-  { id: 'px9', brand: 'Google', name: 'Pixel 9', W: 72.0, H: 152.8, T: 8.5, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: { x: 0, len: 40 } },
-  { id: 'px9p', brand: 'Google', name: 'Pixel 9 Pro', W: 72.0, H: 152.8, T: 8.5, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: { x: 0, len: 40 } },
-  { id: 'px9xl', brand: 'Google', name: 'Pixel 9 Pro XL', W: 76.6, H: 162.8, T: 8.5, R: 10.5, cams: camPixel(76.6), buttons: [B('right', 44, 22), B('right', 68, 10)], bottom: { x: 0, len: 40 } },
-  { id: 'px10', brand: 'Google', name: 'Pixel 10', W: 72.0, H: 152.8, T: 8.6, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: { x: 0, len: 40 } },
-  { id: 'px10p', brand: 'Google', name: 'Pixel 10 Pro', W: 72.0, H: 152.8, T: 8.6, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: { x: 0, len: 40 } },
-  { id: 'px10xl', brand: 'Google', name: 'Pixel 10 Pro XL', W: 76.6, H: 162.8, T: 8.5, R: 10.5, approx: true, cams: camPixel(76.6), buttons: [B('right', 44, 22), B('right', 68, 10)], bottom: { x: 0, len: 40 } },
+  { id: 'px9', brand: 'Google', name: 'Pixel 9', W: 72.0, H: 152.8, T: 8.5, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: pxBottom, approx: true },
+  { id: 'px9p', brand: 'Google', name: 'Pixel 9 Pro', W: 72.0, H: 152.8, T: 8.5, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: pxBottom, approx: true },
+  { id: 'px9xl', brand: 'Google', name: 'Pixel 9 Pro XL', W: 76.6, H: 162.8, T: 8.5, R: 10.5, cams: camPixel(76.6), buttons: [B('right', 44, 22), B('right', 68, 10)], bottom: pxBottom, approx: true },
+  { id: 'px10', brand: 'Google', name: 'Pixel 10', W: 72.0, H: 152.8, T: 8.6, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: pxBottom, approx: true },
+  { id: 'px10p', brand: 'Google', name: 'Pixel 10 Pro', W: 72.0, H: 152.8, T: 8.6, R: 10, cams: camPixel(72), buttons: [B('right', 40, 22), B('right', 64, 10)], bottom: pxBottom, approx: true },
+  { id: 'px10xl', brand: 'Google', name: 'Pixel 10 Pro XL', W: 76.6, H: 162.8, T: 8.5, R: 10.5, cams: camPixel(76.6), buttons: [B("right", 44, 22), B("right", 68, 10)], bottom: pxBottom, approx: true },
 
   // ---------- Libero ----------
-  { id: 'custom', brand: 'Personalizzato', name: 'Misure tue', W: 72, H: 150, T: 8, R: 10, cams: [R(20, 20, 30, 30, 8)], buttons: [B('right', 50, 16)], bottom: { x: 0, len: 38 } },
+  { id: 'custom', brand: 'Personalizzato', name: 'Misure tue', W: 72, H: 150, T: 8, R: 10, cams: [R(20, 20, 30, 30, 8)], buttons: [B('right', 50, 16)], bottom: [{ x: 0, len: 38, h: 6 }] },
 ];
 
 export function phoneById(id) {

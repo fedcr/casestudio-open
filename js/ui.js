@@ -6,7 +6,7 @@ import { stl, threeMF, download, processPreset, filamentPreset, zip } from './ex
 
 const $ = (s, r = document) => r.querySelector(s);
 const ICON = n => `<svg class="i"><use href="sprite.svg#${n}"/></svg>`;
-const KEY = 'csopen.v2';
+const KEY = 'csopen.v3';
 
 // ---------- stato ----------
 let P = defaults();
@@ -313,6 +313,8 @@ const V = {
     ${range('bumper.chamfer', 'Smusso esterno', 0, 1.2, 0.1, 'mm')}
     <h2>Fianchi</h2>
     ${seg('bumper.side', [['smooth', 'Lisci'], ['ribs', 'Nervature'], ['wave', 'Onda']])}
+    <h2>Angoli esterni</h2>
+    ${seg('bumper.corners', [['follow', 'Seguono il telefono'], ['sharp', 'Vivi']])}
     <h2>Lato inferiore</h2>
     ${seg('bumper.bottom', [['cut', 'Fori precisi'], ['open', 'Aperto']])}
     <h2>Piastra posteriore in PLA</h2>
@@ -455,7 +457,7 @@ $('#body').addEventListener('input', e => {
 });
 $('#body').addEventListener('change', e => {
   const t = e.target;
-  if (t.id === 'phoneSel') { P.phoneId = t.value; P.phone = clonePhone(phoneById(t.value)); P.buttons.enabled = null; sel = { type: 'cam', i: 0 }; render(); schedule(60); }
+  if (t.id === 'phoneSel') { P.phoneId = t.value; P.phone = clonePhone(phoneById(t.value)); P.buttons.enabled = null; P.bumper.corners = P.phone.outer || 'follow'; sel = { type: 'cam', i: 0 }; render(); schedule(60); }
   else if (t.id === 'photo') { loadPhoto(t.files[0]); t.value = ''; }
   else if (t.dataset.bt !== undefined) {
     const n = P.phone.buttons.length; const cur = P.buttons.enabled || [...Array(n).keys()];

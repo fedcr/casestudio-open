@@ -96,7 +96,9 @@ export function buildCase(M, P, raster) {
     else slabs.push({ key, z0, z1: z0 + LAYER, o: outerAt(zm), i: innerAt(zm) });
   }
   const rings = slabs.map(s => {
-    const xs = rrect(M, W, H, R, s.o).subtract(rrect(M, W, H, R, s.i));
+    // angoli esterni: 'follow' = offset costante dal telefono; 'sharp' = raggio vicino a quello del telefono (piu' materiale sugli spigoli)
+    const outer = B.corners === 'sharp' ? rrect(M, W + 2 * s.o, H + 2 * s.o, Math.min(R + 0.8, R + s.o), 0) : rrect(M, W, H, R, s.o);
+    const xs = outer.subtract(rrect(M, W, H, R, s.i));
     return ext(xs, s.z0, s.z1);
   });
   let bumper = Manifold.union(rings);
@@ -108,9 +110,13 @@ export function buildCase(M, P, raster) {
   // fondo (USB, speaker)
   {
     const yb = -(H / 2 + wallMid);
-    const len = B.bottom === 'open' ? Math.min(W - 2 * R + 6, W - 8) : ph.bottom.len;
-    const h = Math.max(6, Math.min(T - 0.6, 7));
-    cuts.push(slot(M, 0, -1, [ph.bottom.x, yb, zBody], len, h, B.wall + 2));
+    const list = Array.isArray(ph.bottom) ? ph.bottom : [ph.bottom];
+    if (B.bottom === 'open') {
+      cuts.push(slot(M, 0, -1, [0, yb, zBody], Math.min(W - 2 * Math.max(R, 4) + 6, W - 8), Math.max(6, Math.min(T - 0.6, 7)), B.wall + 2));
+    } else for (const c of list) {
+      const h = Math.max(2.4, Math.min(T - 0.8, c.h || 6));
+      cuts.push(slot(M, 0, -1, [c.x, yb, zBody], Math.max(c.len, h), h, B.wall + 2));
+    }
   }
   // tasti laterali
   const items = ph.buttons.map((b, idx) => ({ ...b, idx })).filter(b => !BT.enabled || BT.enabled.includes(b.idx));
@@ -122,7 +128,7 @@ export function buildCase(M, P, raster) {
     const yc = H / 2 - b.y;
     const xo = sgn * (W / 2 + tol + B.wall / 2);   // centro parete
     const xf = sgn * (W / 2 + tol + B.wall);       // faccia esterna
-    if (BT.mode === 'cutout') {
+    if (BT.mode === 'cutout' || b.cut) {
       cuts.push(slot(M, sgn, 0, [xo, yc, zBody], b.len + 3, Math.max(4, tabH), B.wall + 2));
     } else if (BT.mode === 'tab') {
       // pad: stadio in rilievo, circondato da una gola che lascia una membrana flessibile (nessun foro passante)
@@ -235,7 +241,6 @@ export function buildCase(M, P, raster) {
 
   // controlli
   if (Math.max(W, H) + 2 * baseOut > 180) warnings.push('La cover supera il piano di stampa dell\'A1 mini (180 mm).');
-  if ((ph.cams || []).some(c => c.w + 2 * PL.camMargin > W - 2 * lim)) warnings.push('La fotocamera e\' molto larga: il taglio e\' stato limitato per non spezzare la piastra.');
 
   return {
     bumper, plate,

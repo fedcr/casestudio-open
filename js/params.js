@@ -18,13 +18,14 @@ export function defaults() {
       engage: 0.5,    // quanto la piastra entra nella scanalatura
       chamfer: 0.6,   // smusso esterno
       side: 'smooth', // smooth | ribs | wave
-      bottom: 'cut'   // cut | open
+      bottom: 'cut',  // cut | open
+      corners: 'follow' // follow | sharp
     },
     plate: {
       T: 2.0,         // spessore base
       guard: true,    // anello di protezione fotocamera
       guardH: 0.8,
-      camMargin: 1.4,
+      camMargin: 0.8,
       cell: 0.5       // risoluzione del rilievo (mm)
     },
     pattern: {
