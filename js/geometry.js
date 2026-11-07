@@ -54,7 +54,7 @@ export function buildCase(M, P, raster) {
   const pocketH = snapUp(MG.depth + 0.2);
   if (MG.mode === 'ring' || MG.mode === 'discs') {
     const need = snapUp(0.4 + (MG.mode === 'discs' ? snapUp(MG.discH + 0.2) : pocketH) + 0.4);
-    if (plateT < need) { plateT = need; warnings.push(`Spessore piastra portato a ${plateT.toFixed(1)} mm per alloggiare i magneti.`); }
+    if (plateT < need) { plateT = need; warnings.push({ k: 'Spessore piastra portato a {0} mm per alloggiare i magneti.', a: [plateT.toFixed(1)] }); }
   } else if (MG.mode === 'open') {
     if (plateT < 1.4) plateT = 1.4;
   }

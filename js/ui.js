@@ -3,6 +3,7 @@ import { PHONES, phoneById, clonePhone } from './phones.js';
 import { PATTERNS, CATEGORIES, patternById, patternDefaults } from './patterns.js';
 import { defaults, deepMerge, gridSpec, LAYER } from './params.js';
 import { stl, threeMF, download, processPreset, filamentPreset, zip } from './export.js';
+import { t, num as fnum, LANGS, getLang, setLang, applyStatic } from './i18n.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const ICON = n => `<svg class="i"><use href="sprite.svg#${n}"/></svg>`;
@@ -29,14 +30,14 @@ let sel = { type: 'cam', i: 0 };
 const get = (o, path) => path.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, path, v) => { const ks = path.split('.'); const l = ks.pop(); const t = ks.reduce((a, k) => a[k], o); t[l] = v; };
 const save = () => { try { const c = JSON.parse(JSON.stringify(P)); c.pattern.image.dataUrl = null; localStorage.setItem(KEY, JSON.stringify(c)); } catch { /* ok */ } };
-const fmt = (v, step) => { const d = step >= 1 ? 0 : step >= 0.1 ? 1 : 2; return Number(v).toFixed(d); };
+const fmt = (v, step) => fnum(v, step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
 
 // ---------- viewer & worker ----------
 const viewer = new Viewer($('#cv'));
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 const pending = new Map();
 worker.onmessage = e => { const r = pending.get(e.data.id); if (r) { pending.delete(e.data.id); r(e.data); } };
-worker.onerror = e => setStatus('Errore del motore 3D: ' + (e.message || 'sconosciuto'), 'err');
+worker.onerror = e => setStatus(t('Errore del motore 3D: {0}', e.message || t('sconosciuto')), 'err');
 const request = (fitTest = false) => new Promise(res => {
   const id = ++seq; pending.set(id, res);
   worker.postMessage({ id, P: JSON.parse(JSON.stringify({ ...P, pattern: { ...P.pattern, image: { ...P.pattern.image, dataUrl: null } } })), raster: rasterize(), fitTest });
@@ -48,28 +49,31 @@ function setStatus(text, mode = 'idle') {
   $('#stSpin').firstElementChild.setAttribute('href', 'sprite.svg#' + (mode === 'err' ? 'triangle-alert' : mode === 'ok' ? 'check' : 'loader-circle'));
 }
 let timer = 0;
-function schedule(delay = 140) { clearTimeout(timer); save(); setStatus('Aggiorno il modello', 'busy'); timer = setTimeout(rebuild, delay); }
+function schedule(delay = 140) { clearTimeout(timer); save(); setStatus(t('Aggiorno il modello'), 'busy'); timer = setTimeout(rebuild, delay); }
 async function rebuild() {
   const r = await request();
   if (r.id !== seq) return; // risposta superata da una richiesta piu' recente
-  if (r.error) { setStatus('Parametri non validi: ' + r.error, 'err'); return; }
+  if (r.error) { setStatus(t('Parametri non validi: {0}', r.error), 'err'); return; }
   last = r;
   viewer.setModel(r, r.meta);
   viewer.setColors(P.colors, P.pattern.twoTone);
   viewer.showPhone(showPhone, P, r.meta);
   applyAccent();
-  setStatus(`Pronto in ${(r.stats.ms / 1000).toFixed(1)} s`, 'ok');
+  setStatus(t('Pronto in {0} s', fnum(r.stats.ms / 1000, 1)), 'ok');
   renderInfo();
-  if (r.meta.warnings.length) toast(r.meta.warnings[0]);
+  if (r.meta.warnings.length) toast(tw(r.meta.warnings[0]));
   if (tab === 'print') updatePrintStatics();
 }
 function renderInfo() {
   if (!last) return;
   const m = last.meta, gT = last.stats.bumperVol * 1.21 / 1000 * 0.7, gP = last.stats.plateVol * 1.24 / 1000 * 0.8;
-  $('#info').innerHTML = `<b>${m.outerW.toFixed(1)} × ${m.outerH.toFixed(1)} × ${m.Z.toFixed(1)} mm</b><br>Bordo ~${gT.toFixed(0)} g di TPU, piastra ~${gP.toFixed(0)} g di PLA`;
+  $('#info').innerHTML = `<b>${fnum(m.outerW, 1)} × ${fnum(m.outerH, 1)} × ${fnum(m.Z, 1)} mm</b><br>${t('Bordo ~{0} g di TPU, piastra ~{1} g di PLA', fnum(gT, 0), fnum(gP, 0))}`;
 }
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4500); }
+
+// avvisi del motore: stringa italiana o {k, a} con argomenti
+const tw = w => typeof w === 'string' ? t(w) : t(w.k, ...(w.a || []));
 
 // ---------- rasterizzazione immagine/testo ----------
 function otsu(vals) {
@@ -128,36 +132,36 @@ function rasterize() {
   return out;
 }
 function loadImage(file) {
-  if (!file || !(file.type.startsWith('image/') || /\.svg$/i.test(file.name))) return toast('Scegli un file immagine (PNG, JPG, WebP, SVG).');
+  if (!file || !(file.type.startsWith('image/') || /\.svg$/i.test(file.name))) return toast(t('Scegli un file immagine (PNG, JPG, WebP, SVG).'));
   const url = URL.createObjectURL(file);
   const im = new Image();
-  im.onload = () => { imgEl = im; P.pattern.image.dataUrl = url; P.pattern.kind = 'image'; P.plate.cell = Math.min(P.plate.cell, 0.4); patCat = 'own'; render(); schedule(60); toast('Immagine caricata'); };
-  im.onerror = () => toast('Impossibile leggere questa immagine.');
+  im.onload = () => { imgEl = im; P.pattern.image.dataUrl = url; P.pattern.kind = 'image'; P.plate.cell = Math.min(P.plate.cell, 0.4); patCat = 'own'; render(); schedule(60); toast(t('Immagine caricata')); };
+  im.onerror = () => toast(t('Impossibile leggere questa immagine.'));
   im.src = url;
 }
 function loadPhoto(file) {
-  if (!file || !file.type.startsWith('image/')) return toast('Scegli una foto (PNG o JPG).');
+  if (!file || !file.type.startsWith('image/')) return toast(t('Scegli una foto (PNG o JPG).'));
   const im = new Image(); im.onload = () => { photoEl = im; drawEditor(); }; im.src = URL.createObjectURL(file);
 }
 
 // ---------- componenti UI ----------
 const range = (path, label, min, max, step, unit = '') => {
   const v = get(P, path);
-  return `<div class="row"><label for="r-${path}">${label}</label><span class="val" data-val="${path}">${fmt(v, step)}${unit ? ' ' + unit : ''}</span>
+  return `<div class="row"><label for="r-${path}">${t(label)}</label><span class="val" data-val="${path}">${fmt(v, step)}${unit ? ' ' + unit : ''}</span>
   <input id="r-${path}" type="range" data-p="${path}" data-unit="${unit}" data-step="${step}" min="${min}" max="${max}" step="${step}" value="${v}" style="--p:${(v - min) / (max - min) * 100}%"></div>`;
 };
-const seg = (path, opts) => { const v = get(P, path); return `<div class="seg" role="group">${opts.map(([k, l]) => `<button type="button" data-seg="${path}" data-v="${k}" aria-pressed="${v === k}">${l}</button>`).join('')}</div>`; };
-const sw = (path, label) => `<label class="switch"><span>${label}</span><input type="checkbox" data-p="${path}" ${get(P, path) ? 'checked' : ''}><span class="tr"></span></label>`;
-const num = (path, label, step = 0.1) => `<label class="fl">${label}<input type="number" data-p="${path}" step="${step}" value="${get(P, path)}" inputmode="decimal"></label>`;
-const color = (path, label) => `<label class="sw"><input type="color" data-p="${path}" value="${get(P, path)}" aria-label="${label}">${label}</label>`;
-const note = (t, cls = '', icon = 'triangle-alert') => `<div class="note ${cls}">${ICON(icon)}<div>${t}</div></div>`;
+const seg = (path, opts) => { const v = get(P, path); return `<div class="seg" role="group">${opts.map(([k, l]) => `<button type="button" data-seg="${path}" data-v="${k}" aria-pressed="${v === k}">${t(l)}</button>`).join('')}</div>`; };
+const sw = (path, label) => `<label class="switch"><span>${t(label)}</span><input type="checkbox" data-p="${path}" ${get(P, path) ? 'checked' : ''}><span class="tr"></span></label>`;
+const num = (path, label, step = 0.1) => `<label class="fl">${t(label)}<input type="number" data-p="${path}" step="${step}" value="${get(P, path)}" inputmode="decimal"></label>`;
+const color = (path, label) => `<label class="sw"><input type="color" data-p="${path}" value="${get(P, path)}" aria-label="${t(label)}">${t(label)}</label>`;
+const note = (txt, cls = '', icon = 'triangle-alert') => `<div class="note ${cls}">${ICON(icon)}<div>${t(txt)}</div></div>`;
 
 const TABS = [
   ['phone', 'smartphone', 'Telefono'], ['case', 'layers', 'Cover'], ['pattern', 'palette', 'Motivo'],
   ['mag', 'magnet', 'Magneti'], ['btn', 'mouse-pointer-click', 'Tasti'], ['print', 'printer', 'Stampa']
 ];
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([k, ic, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${ICON(ic)}<span>${l}</span></button>`).join('');
+  $('#tabs').innerHTML = TABS.map(([k, ic, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${tab === k}">${ICON(ic)}<span>${t(l)}</span></button>`).join('');
 }
 
 // ---------- miniature pattern ----------
@@ -263,12 +267,12 @@ function edMove(e) {
 function edUp() { drag = null; }
 function shapeRows() {
   const cams = P.phone.cams.map((c, i) => `<div class="shape ${sel.type === 'cam' && sel.i === i ? 'sel' : ''}" data-sel="cam:${i}">
-    <span title="${c.t === 'c' ? 'Cerchio' : 'Rettangolo'}">${ICON(c.t === 'c' ? 'circle-dot' : 'square')}</span>
+    <span title="${t(c.t === 'c' ? 'Cerchio' : 'Rettangolo')}">${ICON(c.t === 'c' ? 'circle-dot' : 'square')}</span>
     <input type="number" step="0.1" data-p="phone.cams.${i}.x" value="${c.x}" aria-label="X"><input type="number" step="0.1" data-p="phone.cams.${i}.y" value="${c.y}" aria-label="Y">
-    <input type="number" step="0.1" data-p="phone.cams.${i}.w" value="${c.w}" aria-label="${c.t === 'c' ? 'Diametro' : 'Larghezza'}">
-    ${c.t === 'c' ? '<span></span>' : `<input type="number" step="0.1" data-p="phone.cams.${i}.h" value="${c.h}" aria-label="Altezza">`}
-    <button data-del-cam="${i}" aria-label="Elimina forma">${ICON('x')}</button></div>`).join('');
-  return cams || '<p class="hint">Nessuna fotocamera: la piastra resta intera.</p>';
+    <input type="number" step="0.1" data-p="phone.cams.${i}.w" value="${c.w}" aria-label="${t(c.t === 'c' ? 'Diametro' : 'Larghezza')}">
+    ${c.t === 'c' ? '<span></span>' : `<input type="number" step="0.1" data-p="phone.cams.${i}.h" value="${c.h}" aria-label="${t('Altezza')}">`}
+    <button data-del-cam="${i}" aria-label="${t('Elimina forma')}">${ICON('x')}</button></div>`).join('');
+  return cams || `<p class="hint">${t('Nessuna fotocamera: la piastra resta intera.')}</p>`;
 }
 function refreshShapeList() { const el = $('#shapes'); if (el) el.innerHTML = shapeRows(); }
 function syncShapeInputs() {
@@ -280,148 +284,148 @@ function syncShapeInputs() {
 const V = {
   phone() {
     const groups = {};
-    PHONES.forEach(p => (groups[p.brand] ||= []).push(p));
-    const opts = Object.entries(groups).map(([b, ps]) => `<optgroup label="${b}">${ps.map(p => `<option value="${p.id}" ${p.id === P.phoneId ? 'selected' : ''}>${p.name}</option>`).join('')}</optgroup>`).join('');
+    PHONES.forEach(p => (groups[t(p.brand)] ||= []).push(p));
+    const opts = Object.entries(groups).map(([b, ps]) => `<optgroup label="${b}">${ps.map(p => `<option value="${p.id}" ${p.id === P.phoneId ? 'selected' : ''}>${t(p.name)}</option>`).join('')}</optgroup>`).join('');
     const ph = phoneById(P.phoneId);
-    return `<h2>Modello</h2>
-    <select id="phoneSel" aria-label="Modello di telefono">${opts}</select>
-    <p class="src">${ph.src ? 'Fotocamere, tasti e angoli misurati da: ' + ph.src + '.' : 'Fotocamere e tasti stimati: controllali nel disegno qui sotto.'}${ph.note ? ' ' + ph.note + '.' : ''}</p>
+    return `<h2>${t('Modello')}</h2>
+    <select id="phoneSel" aria-label="${t('Modello di telefono')}">${opts}</select>
+    <p class="src">${ph.src ? t('Fotocamere, tasti e angoli misurati da: {0}.', t(ph.src)) : t('Fotocamere e tasti stimati: controllali nel disegno qui sotto.')}${ph.note ? ' ' + t(ph.note) + '.' : ''}</p>
     ${ph.approx ? note('Alcune misure di questo modello sono stimate: confrontale con il tuo telefono prima di stampare.') : ''}
-    <h2>Dimensioni (mm)</h2>
+    <h2>${t('Dimensioni (mm)')}</h2>
     <div class="grid2">${num('phone.W', 'Larghezza')}${num('phone.H', 'Altezza')}${num('phone.T', 'Spessore')}${num('phone.R', 'Raggio angoli')}</div>
-    <p class="hint">Larghezza, altezza e spessore vengono dalle schede ufficiali.</p>
-    <h2>Fotocamere e tasti</h2>
-    <div class="editor"><canvas id="ed" aria-label="Disegno del retro del telefono: trascina fotocamere e tasti"></canvas></div>
-    <div class="legend"><span><i style="background:#1c2328;opacity:.7"></i>Fotocamera</span><span><i style="background:var(--accent-ui)"></i>Tasto laterale</span></div>
-    <p class="hint">Vista da dietro. <b>Trascina</b> le forme per allinearle al tuo telefono; i tasti si spostano lungo il bordo.</p>
+    <p class="hint">${t('Larghezza, altezza e spessore vengono dalle schede ufficiali.')}</p>
+    <h2>${t('Fotocamere e tasti')}</h2>
+    <div class="editor"><canvas id="ed" aria-label="${t('Disegno del retro del telefono: trascina fotocamere e tasti')}"></canvas></div>
+    <div class="legend"><span><i style="background:#1c2328;opacity:.7"></i>${t('Fotocamera')}</span><span><i style="background:var(--accent-ui)"></i>${t('Tasto laterale')}</span></div>
+    <p class="hint">${t('Vista da dietro. <b>Trascina</b> le forme per allinearle al tuo telefono; i tasti si spostano lungo il bordo.')}</p>
     <div class="btns three">
-      <button class="btn sm" data-act="addc">${ICON('circle-dot')}Cerchio</button>
-      <button class="btn sm" data-act="addr">${ICON('square')}Rettangolo</button>
-      <label class="btn sm" for="photo" style="cursor:pointer">${ICON('image')}Foto</label>
+      <button class="btn sm" data-act="addc">${ICON('circle-dot')}${t('Cerchio')}</button>
+      <button class="btn sm" data-act="addr">${ICON('square')}${t('Rettangolo')}</button>
+      <label class="btn sm" for="photo" style="cursor:pointer">${ICON('image')}${t('Foto')}</label>
     </div>
     <input type="file" id="photo" accept="image/*" class="vh">
     <div class="shapes" id="shapes">${shapeRows()}</div>
-    <p class="hint">Colonne: X, Y (centro dall'angolo in alto a sinistra), larghezza, altezza. Con <b>Foto</b> puoi sovrapporre uno scatto dritto del retro del telefono, ritagliato sui bordi, per allineare tutto a occhio.</p>
-    <h2>Tolleranza</h2>
+    <p class="hint">${t(`Colonne: X, Y (centro dall'angolo in alto a sinistra), larghezza, altezza. Con <b>Foto</b> puoi sovrapporre uno scatto dritto del retro del telefono, ritagliato sui bordi, per allineare tutto a occhio.`)}</p>
+    <h2>${t(`Tolleranza`)}</h2>
     ${range('fit.tol', 'Gioco per lato', 0, 0.6, 0.05, 'mm')}
-    <p class="hint">0,2 mm va bene per TPU 95A. Se la cover risulta larga scendi a 0,1; se non entra sali a 0,3. Per provare senza sprecare materiale stampa l'anello di prova (scheda Stampa).</p>`;
+    <p class="hint">${t(`0,2 mm va bene per TPU 95A. Se la cover risulta larga scendi a 0,1; se non entra sali a 0,3. Per provare senza sprecare materiale stampa l'anello di prova (scheda Stampa).`)}</p>`;
   },
   case() {
-    return `<h2>Bordo in TPU</h2>
+    return `<h2>${t(`Bordo in TPU`)}</h2>
     ${range('bumper.wall', 'Spessore parete', 1.4, 3, 0.1, 'mm')}
     ${range('bumper.lipOv', 'Bordo sullo schermo', 0.8, 2.4, 0.1, 'mm')}
     ${range('bumper.lipT', 'Rialzo schermo', 0.8, 2, 0.2, 'mm')}
     ${range('bumper.chamfer', 'Smusso esterno', 0, 1.2, 0.1, 'mm')}
-    <h2>Fianchi</h2>
+    <h2>${t(`Fianchi`)}</h2>
     ${seg('bumper.side', [['smooth', 'Lisci'], ['ribs', 'Nervature'], ['wave', 'Onda']])}
-    <h2>Angoli esterni</h2>
+    <h2>${t(`Angoli esterni`)}</h2>
     ${seg('bumper.corners', [['follow', 'Seguono il telefono'], ['sharp', 'Vivi']])}
-    <h2>Lato inferiore</h2>
+    <h2>${t(`Lato inferiore`)}</h2>
     ${seg('bumper.bottom', [['cut', 'Fori precisi'], ['open', 'Aperto']])}
-    <h2>Piastra posteriore in PLA</h2>
+    <h2>${t(`Piastra posteriore in PLA`)}</h2>
     ${range('plate.T', 'Spessore base', 1.2, 3, 0.2, 'mm')}
     ${range('bumper.engage', 'Presa nel bordo', 0.3, 1, 0.1, 'mm')}
     ${range('bumper.rimOv', 'Bordo posteriore', 0.6, 1.6, 0.1, 'mm')}
     ${sw('plate.guard', 'Anello protezione fotocamera')}
     ${P.plate.guard ? range('plate.guardH', 'Altezza anello', 0.4, 2, 0.2, 'mm') : ''}
     ${range('plate.camMargin', 'Margine fotocamera', 0.6, 3, 0.2, 'mm')}
-    <p class="hint">La piastra si incastra nella scanalatura del bordo in TPU: per cambiare stile basta stampare un'altra piastra.</p>`;
+    <p class="hint">${t(`La piastra si incastra nella scanalatura del bordo in TPU: per cambiare stile basta stampare un'altra piastra.`)}</p>`;
   },
   pattern() {
     const k = P.pattern.kind, pat = patternById(k);
     P.pattern.p = { ...patternDefaults(k), ...P.pattern.p };
     const list = PATTERNS.filter(p => p.cat === patCat);
-    const items = list.map(p => `<button class="pitem" data-pat="${p.id}" aria-pressed="${p.id === k}">${p.cat === 'own' && p.id !== 'none' ? `<span class="ph-icon">${ICON(p.id === 'image' ? 'image' : 'type')}</span>` : p.id === 'none' ? `<span class="ph-icon">${ICON('square')}</span>` : `<canvas width="56" height="56" data-th="${p.id}"></canvas>`}${p.label}</button>`).join('');
-    let h = `<h2>Motivo della piastra</h2>
-    <div class="cats" role="group">${CATEGORIES.map(c => `<button class="cat" data-cat="${c.id}" aria-pressed="${c.id === patCat}">${c.label}</button>`).join('')}</div>
+    const items = list.map(p => `<button class="pitem" data-pat="${p.id}" aria-pressed="${p.id === k}">${p.cat === 'own' && p.id !== 'none' ? `<span class="ph-icon">${ICON(p.id === 'image' ? 'image' : 'type')}</span>` : p.id === 'none' ? `<span class="ph-icon">${ICON('square')}</span>` : `<canvas width="56" height="56" data-th="${p.id}"></canvas>`}${t(p.label)}</button>`).join('');
+    let h = `<h2>${t(`Motivo della piastra`)}</h2>
+    <div class="cats" role="group">${CATEGORIES.map(c => `<button class="cat" data-cat="${c.id}" aria-pressed="${c.id === patCat}">${t(c.label)}</button>`).join('')}</div>
     <div class="pgrid">${items}</div>`;
     if (k === 'image') {
       const I = P.pattern.image;
-      h += `<h2>La tua immagine</h2>
-      <label class="drop" for="file" tabindex="0" id="drop">${ICON('upload')}<span>${imgEl ? 'Cambia immagine' : 'Scegli un file o trascinalo qui'}</span><small>PNG, JPG, WebP o SVG. Puoi anche incollarla con Ctrl+V.</small></label>`;
-      if (imgEl) h += `<img class="thumb" alt="Anteprima" src="${I.dataUrl}">
-      <h2>Rilievo da</h2>${seg('pattern.image.ink', [['dark', 'Parti scure'], ['light', 'Parti chiare']])}
-      <h2>Come diventa rilievo</h2>${seg('pattern.image.mode', [['binary', 'Sagoma'], ['relief', 'Sfumature']])}
+      h += `<h2>${t(`La tua immagine`)}</h2>
+      <label class="drop" for="file" tabindex="0" id="drop">${ICON('upload')}<span>${t(imgEl ? 'Cambia immagine' : 'Scegli un file o trascinalo qui')}</span><small>${t('PNG, JPG, WebP o SVG. Puoi anche incollarla con Ctrl+V.')}</small></label>`;
+      if (imgEl) h += `<img class="thumb" alt="${t('Anteprima')}" src="${I.dataUrl}">
+      <h2>${t(`Rilievo da`)}</h2>${seg('pattern.image.ink', [['dark', 'Parti scure'], ['light', 'Parti chiare']])}
+      <h2>${t(`Come diventa rilievo`)}</h2>${seg('pattern.image.mode', [['binary', 'Sagoma'], ['relief', 'Sfumature']])}
       ${I.mode === 'binary' ? `${sw('pattern.image.auto', 'Soglia automatica')}${I.auto ? '' : range('pattern.image.threshold', 'Soglia', 0.1, 0.9, 0.01)}` : range('pattern.image.contrast', 'Contrasto', 0.4, 3, 0.05)}
       ${range('pattern.image.blur', 'Ammorbidimento', 0, 3, 0.1, 'mm')}
-      <h2>Inquadratura</h2>${seg('pattern.image.fit', [['contain', 'Contieni'], ['cover', 'Riempi']])}
+      <h2>${t(`Inquadratura`)}</h2>${seg('pattern.image.fit', [['contain', 'Contieni'], ['cover', 'Riempi']])}
       ${range('pattern.image.zoom', 'Zoom', 0.3, 3, 0.05)}${range('pattern.image.offx', 'Sposta in orizzontale', -1, 1, 0.02)}${range('pattern.image.offy', 'Sposta in verticale', -1, 1, 0.02)}`;
     } else if (k === 'text') {
       const T = P.pattern.text;
-      h += `<h2>Testo</h2><textarea class="field" data-p="pattern.text.value" rows="2" style="height:auto;padding:9px 12px;resize:vertical" aria-label="Testo">${T.value}</textarea>
-      <div class="row" style="grid-template-columns:1fr"><label class="fl">Carattere<select data-p="pattern.text.font">${['sans-serif', 'serif', 'monospace', 'cursive', 'Impact'].map(f => `<option ${T.font === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label></div>
+      h += `<h2>${t(`Testo`)}</h2><textarea class="field" data-p="pattern.text.value" rows="2" style="height:auto;padding:9px 12px;resize:vertical" aria-label="${t('Testo')}">${T.value}</textarea>
+      <div class="row" style="grid-template-columns:1fr"><label class="fl">${t('Carattere')}<select data-p="pattern.text.font">${['sans-serif', 'serif', 'monospace', 'cursive', 'Impact'].map(f => `<option ${T.font === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label></div>
       ${range('pattern.text.size', 'Larghezza', 0.2, 0.95, 0.01)}${range('pattern.text.angle', 'Rotazione', -90, 90, 1, '°')}`;
     } else if (pat.params.length) {
-      h += `<h2>Parametri</h2>` + pat.params.map(q => range('pattern.p.' + q.k, q.label, q.min, q.max, q.step, q.unit || '')).join('');
-      h += `<button class="btn sm" data-act="seed">${ICON('rotate-3d')}Nuova variante</button>`;
+      h += `<h2>${t(`Parametri`)}</h2>` + pat.params.map(q => range('pattern.p.' + q.k, q.label, q.min, q.max, q.step, q.unit || '')).join('');
+      h += `<button class="btn sm" data-act="seed">${ICON('rotate-3d')}${t('Nuova variante')}</button>`;
     }
     if (k !== 'none') {
-      h += `<h2>Rilievo</h2>${range('pattern.amp', 'Altezza', 0.2, 1.6, 0.1, 'mm')}${range('plate.cell', 'Dettaglio (più basso = più fine)', 0.3, 1, 0.05, 'mm')}${sw('pattern.invert', 'Inverti rilievo')}
+      h += `<h2>${t(`Rilievo`)}</h2>${range('pattern.amp', 'Altezza', 0.2, 1.6, 0.1, 'mm')}${range('plate.cell', 'Dettaglio (più basso = più fine)', 0.3, 1, 0.05, 'mm')}${sw('pattern.invert', 'Inverti rilievo')}
       ${sw('pattern.twoTone', 'Due colori (un cambio filamento)')}
-      <p class="hint">${P.pattern.twoTone ? 'Il rilievo viene stampato in un secondo colore: la stampante si ferma a metà e cambi filamento a mano, senza AMS.' : 'Tutta la piastra resta in un solo colore.'}</p>
-      <p class="hint"><b>Tattile:</b> da 0,8 mm in su il rilievo si sente bene sotto le dita e resta protetto dal bordo in TPU.</p>`;
+      <p class="hint">${t(P.pattern.twoTone ? 'Il rilievo viene stampato in un secondo colore: la stampante si ferma a metà e cambi filamento a mano, senza AMS.' : 'Tutta la piastra resta in un solo colore.')}</p>
+      <p class="hint">${t(`<b>Tattile:</b> da 0,8 mm in su il rilievo si sente bene sotto le dita e resta protetto dal bordo in TPU.`)}</p>`;
     }
-    h += `<h2>Colori</h2><div class="swatches">${color('colors.bumper', 'Bordo')}${color('colors.plate', 'Piastra')}${P.pattern.twoTone && k !== 'none' ? color('colors.relief', 'Rilievo') : ''}</div>`;
+    h += `<h2>${t(`Colori`)}</h2><div class="swatches">${color('colors.bumper', 'Bordo')}${color('colors.plate', 'Piastra')}${P.pattern.twoTone && k !== 'none' ? color('colors.relief', 'Rilievo') : ''}</div>`;
     return h;
   },
   mag() {
     const M = P.mag;
-    return `<h2>Magneti</h2>
+    return `<h2>${t(`Magneti`)}</h2>
     ${seg('mag.mode', [['none', 'Nessuno'], ['ring', 'Anello'], ['discs', 'Dischetti'], ['open', 'Tasca aperta']])}
-    ${M.mode === 'ring' || M.mode === 'open' ? `<h2>Anello magnetico</h2>${range('mag.od', 'Diametro esterno', 40, 60, 0.5, 'mm')}${range('mag.id', 'Diametro interno', 30, 54, 0.5, 'mm')}${range('mag.depth', 'Spessore magnete', 0.4, 2, 0.2, 'mm')}` : ''}
-    ${M.mode === 'discs' ? `<h2>Dischetti</h2>${range('mag.discD', 'Diametro', 3, 10, 0.5, 'mm')}${range('mag.discH', 'Spessore', 0.5, 3, 0.5, 'mm')}${range('mag.discN', 'Quantità', 6, 24, 1)}${range('mag.discR', 'Raggio della corona', 18, 28, 0.5, 'mm')}` : ''}
+    ${M.mode === 'ring' || M.mode === 'open' ? `<h2>${t(`Anello magnetico`)}</h2>${range('mag.od', 'Diametro esterno', 40, 60, 0.5, 'mm')}${range('mag.id', 'Diametro interno', 30, 54, 0.5, 'mm')}${range('mag.depth', 'Spessore magnete', 0.4, 2, 0.2, 'mm')}` : ''}
+    ${M.mode === 'discs' ? `<h2>${t(`Dischetti`)}</h2>${range('mag.discD', 'Diametro', 3, 10, 0.5, 'mm')}${range('mag.discH', 'Spessore', 0.5, 3, 0.5, 'mm')}${range('mag.discN', 'Quantità', 6, 24, 1)}${range('mag.discR', 'Raggio della corona', 18, 28, 0.5, 'mm')}` : ''}
     ${M.mode !== 'none' ? `${range('mag.y', 'Posizione verticale', -25, 25, 0.5, 'mm')}` : ''}
     ${M.mode === 'ring' || M.mode === 'discs' ? note('I magneti si inseriscono <b>durante la stampa</b>: il file contiene già una pausa al layer giusto. La scheda Stampa dice quando.', 'info', 'info') : ''}
     ${M.mode === 'open' ? note('La tasca resta aperta sul lato del telefono: incolla il magnete e lascialo premere contro il retro. Nessuna pausa necessaria.', 'info', 'info') : ''}
     ${M.mode === 'discs' ? note('Con i dischetti controlla le polarità: alterna N e S come negli anelli MagSafe originali, altrimenti i caricatori non si agganciano bene.') : ''}
-    <p class="hint">Per la ricarica magnetica usa magneti da 0,8–1 mm e tieni la piastra sotto i 2,6 mm in totale. Misura il tuo anello prima di stampare.</p>`;
+    <p class="hint">${t(`Per la ricarica magnetica usa magneti da 0,8–1 mm e tieni la piastra sotto i 2,6 mm in totale. Misura il tuo anello prima di stampare.`)}</p>`;
   },
   btn() {
     const B = P.buttons, list = P.phone.buttons;
     const rows = list.map((b, i) => {
       const on = !B.enabled || B.enabled.includes(i);
-      return `<div data-btnrow><div class="btnrow"><label class="switch" style="margin:0"><span>${b.name ? b.name + ', ' : ''}${b.side === 'right' ? 'lato destro' : 'lato sinistro'}, ${b.len} mm${b.cut ? ' (sempre forato)' : ''}</span><input type="checkbox" data-bt="${i}" ${on ? 'checked' : ''}><span class="tr"></span></label></div>
+      return `<div data-btnrow><div class="btnrow"><label class="switch" style="margin:0"><span>${b.name ? b.name + ', ' : ''}${t(b.side === 'right' ? 'lato destro' : 'lato sinistro')}, ${fnum(b.len, 1)} mm${b.cut ? ' ' + t('(sempre forato)') : ''}</span><input type="checkbox" data-bt="${i}" ${on ? 'checked' : ''}><span class="tr"></span></label></div>
       <div class="grid2" style="margin:2px 0 8px">${num('phone.buttons.' + i + '.y', 'Dall\'alto', 0.5)}${num('phone.buttons.' + i + '.len', 'Lunghezza', 0.5)}</div></div>`;
     }).join('');
-    return `<h2>Tasti laterali</h2>
+    return `<h2>${t(`Tasti laterali`)}</h2>
     ${seg('buttons.mode', [['tab', 'Pad'], ['cutout', 'Foro'], ['closed', 'Chiusi']])}
-    <p class="hint">${B.mode === 'tab' ? '<b>Pad su membrana:</b> un cappuccio in rilievo, circondato da una gola che lascia una pellicola flessibile di TPU. Nessun foro, nessun pezzo da comprare, spessore invariato. Il pad è più lungo del tasto: fa da leva e si trova al tatto.' : B.mode === 'cutout' ? 'Il tasto resta scoperto: massimo feeling, meno protezione.' : 'Parete piena: il tasto si preme attraverso il TPU.'}</p>
-    ${B.mode === 'tab' ? `<h2>Forma del pad</h2>${seg('buttons.pad', [['soft', 'Morbido'], ['flat', 'Piatto'], ['ridged', 'Zigrinato']])}
+    <p class="hint">${t(B.mode === 'tab' ? '<b>Pad su membrana:</b> un cappuccio in rilievo, circondato da una gola che lascia una pellicola flessibile di TPU. Nessun foro, nessun pezzo da comprare, spessore invariato. Il pad è più lungo del tasto: fa da leva e si trova al tatto.' : B.mode === 'cutout' ? 'Il tasto resta scoperto: massimo feeling, meno protezione.' : 'Parete piena: il tasto si preme attraverso il TPU.')}</p>
+    ${B.mode === 'tab' ? `<h2>${t(`Forma del pad`)}</h2>${seg('buttons.pad', [['soft', 'Morbido'], ['flat', 'Piatto'], ['ridged', 'Zigrinato']])}
     ${range('buttons.extra', 'Lunghezza extra', 2, 14, 1, 'mm')}${range('buttons.padH', 'Altezza pad', 0.6, 2, 0.2, 'mm')}
     ${range('buttons.membrane', 'Membrana', 0.6, 1.2, 0.1, 'mm')}${range('buttons.slit', 'Larghezza gola', 0.5, 1.2, 0.1, 'mm')}
-    <p class="hint">Membrana più sottile = tasto più morbido ma meno resistente. 0,8 mm sono 4 passate di ugello: se si strappa sali a 1,0.</p>` : ''}
-    ${B.mode !== 'closed' ? `<h2>Tasti del telefono</h2><p class="hint" style="margin-top:0">Puoi anche trascinarli nel disegno della scheda Telefono.</p>${rows}` : ''}`;
+    <p class="hint">${t(`Membrana più sottile = tasto più morbido ma meno resistente. 0,8 mm sono 4 passate di ugello: se si strappa sali a 1,0.`)}</p>` : ''}
+    ${B.mode !== 'closed' ? `<h2>${t(`Tasti del telefono`)}</h2><p class="hint" style="margin-top:0">${t(`Puoi anche trascinarli nel disegno della scheda Telefono.`)}</p>${rows}` : ''}`;
   },
   print() {
-    return `<h2>Stampante</h2>
-    <div class="kv"><span>Macchina</span><b>Bambu Lab A1 mini</b><span>Ugello</span><b>0,4 mm</b><span>Layer</span><b>0,2 mm</b><span>AMS</span><b>non serve</b></div>
-    <h2>Bordo in TPU</h2>
+    return `<h2>${t(`Stampante`)}</h2>
+    <div class="kv"><span>${t('Macchina')}</span><b>Bambu Lab A1 mini</b><span>${t('Ugello')}</span><b>${fnum(0.4, 1)} mm</b><span>${t('Layer')}</span><b>${fnum(0.2, 1)} mm</b><span>AMS</span><b>${t('non serve')}</b></div>
+    <h2>${t(`Bordo in TPU`)}</h2>
     <div class="btns two">
-      <button class="btn" data-act="bumper3mf">${ICON('package')}3MF Bambu</button>
+      <button class="btn" data-act="bumper3mf">${ICON('package')}${t('3MF Bambu')}</button>
       <button class="btn" data-act="bumperstl">${ICON('file-box')}STL</button>
     </div>
-    <p class="hint">Fronte sul piano, nessun supporto. Bobina esterna con TPU 95A, 230 °C, velocità ridotta (profilo già nel preset).</p>
-    <h2>Piastra in PLA</h2>
+    <p class="hint">${t(`Fronte sul piano, nessun supporto. Bobina esterna con TPU 95A, 230 °C, velocità ridotta (profilo già nel preset).`)}</p>
+    <h2>${t(`Piastra in PLA`)}</h2>
     <div class="btns two">
-      <button class="btn" data-act="plate3mf">${ICON('package')}3MF Bambu</button>
+      <button class="btn" data-act="plate3mf">${ICON('package')}${t('3MF Bambu')}</button>
       <button class="btn" data-act="platestl">${ICON('file-box')}STL</button>
     </div>
     <div id="pauses"></div>
-    <h2>Preset Bambu Lab</h2>
-    <button class="btn wide" data-act="presets">${ICON('printer')}Scarica preset A1 mini (ZIP)</button>
-    <p class="hint">Contiene processo e filamento per TPU e PLA. In Bambu Studio: <b>File → Importa → Importa configurazioni</b>.</p>
-    <h2>Prova di misura</h2>
-    <button class="btn wide" data-act="fit">${ICON('ruler')}Scarica anello di prova</button>
-    <p class="hint">Stampa solo la parte anteriore del bordo, circa 15 minuti. Se il telefono entra con un leggero sforzo, la misura è giusta.</p>
-    <h2>Controlli prima di stampare</h2>
-    <ol class="steps"><li>Stampa prima l'<b>anello di prova</b>.</li><li>Poi il <b>bordo in TPU</b>, fronte sul piano.</li><li>Infine la <b>piastra in PLA</b>; ferma e riprendi quando richiesto.</li><li>Incastra la piastra da dietro e inserisci il telefono.</li></ol>`;
+    <h2>${t(`Preset Bambu Lab`)}</h2>
+    <button class="btn wide" data-act="presets">${ICON('printer')}${t('Scarica preset A1 mini (ZIP)')}</button>
+    <p class="hint">${t(`Contiene processo e filamento per TPU e PLA. In Bambu Studio: <b>File → Importa → Importa configurazioni</b>.`)}</p>
+    <h2>${t(`Prova di misura`)}</h2>
+    <button class="btn wide" data-act="fit">${ICON('ruler')}${t('Scarica anello di prova')}</button>
+    <p class="hint">${t(`Stampa solo la parte anteriore del bordo, circa 15 minuti. Se il telefono entra con un leggero sforzo, la misura è giusta.`)}</p>
+    <h2>${t(`Controlli prima di stampare`)}</h2>
+    <ol class="steps"><li>${t(`Stampa prima l'<b>anello di prova</b>.`)}</li><li>${t(`Poi il <b>bordo in TPU</b>, fronte sul piano.`)}</li><li>${t(`Infine la <b>piastra in PLA</b>; ferma e riprendi quando richiesto.`)}</li><li>${t(`Incastra la piastra da dietro e inserisci il telefono.`)}</li></ol>`;
   }
 };
 
 function updatePrintStatics() {
   const el = $('#pauses'); if (!el || !last) return;
   const ps = last.meta.pauses;
-  el.innerHTML = ps.length ? `<div class="note info">${ICON('info')}<div>${ps.map(p => `Layer <b>${Math.round(p.top_z / LAYER)}</b> (${p.top_z.toFixed(1)} mm): ${p.type === 'pause' ? 'pausa per i magneti' : 'cambio colore'}`).join('<br>')}<br><span style="color:var(--graphite)">Già inseriti nel 3MF. Con l'STL aggiungili a mano dal cursore dei layer.</span></div></div>` : '';
+  el.innerHTML = ps.length ? `<div class="note info">${ICON('info')}<div>${ps.map(p => t('Layer <b>{0}</b> ({1} mm): ', Math.round(p.top_z / LAYER), fnum(p.top_z, 1)) + t(p.type === 'pause' ? 'pausa per i magneti' : 'cambio colore')).join('<br>')}<br><span style="color:var(--graphite)">${t("Già inseriti nel 3MF. Con l'STL aggiungili a mano dal cursore dei layer.")}</span></div></div>` : '';
 }
 
 function render() {
@@ -499,19 +503,19 @@ async function action(a) {
     P.phone.cams.push(a === 'addc' ? { t: 'c', x: W / 2, y: H / 4, w: 12, h: 12, r: 6 } : { t: 'r', x: W / 2, y: H / 4, w: 20, h: 20, r: 6 });
     sel = { type: 'cam', i: P.phone.cams.length - 1 }; drawEditor(); refreshShapeList(); schedule(60); return;
   }
-  if (!last) return toast('Attendi la fine del calcolo.');
+  if (!last) return toast(t('Attendi la fine del calcolo.'));
   const base = slug(phoneById(P.phoneId).name);
-  const pname = phoneById(P.phoneId).name;
-  if (a === 'bumperstl') download(stl(last.bumper, 'bumper'), `${base}-bordo-tpu.stl`);
-  else if (a === 'platestl') download(stl(last.plate, 'plate'), `${base}-piastra-pla.stl`);
+  const pname = t(phoneById(P.phoneId).name);
+  if (a === 'bumperstl') download(stl(last.bumper, 'bumper'), `${base}-${t('bordo-tpu')}.stl`);
+  else if (a === 'platestl') download(stl(last.plate, 'plate'), `${base}-${t('piastra-pla')}.stl`);
   else if (a === 'bumper3mf' || a === 'plate3mf') {
     const isB = a === 'bumper3mf';
-    const r = threeMF(isB ? last.bumper : last.plate, { name: `${pname} ${isB ? 'bordo TPU' : 'piastra PLA'}`, kind: isB ? 'tpu' : 'pla', pauses: isB ? [] : last.meta.pauses });
-    if (!r.fits) toast('Attenzione: il pezzo supera i 180 mm del piano A1 mini.');
-    download(r.blob, `${base}-${isB ? 'bordo-tpu' : 'piastra-pla'}.3mf`);
+    const r = threeMF(isB ? last.bumper : last.plate, { name: `${pname} ${t(isB ? 'bordo TPU' : 'piastra PLA')}`, kind: isB ? 'tpu' : 'pla', pauses: isB ? [] : last.meta.pauses.map(p => ({ ...p, msg: t(p.msg) })) });
+    if (!r.fits) toast(t('Attenzione: il pezzo supera i 180 mm del piano A1 mini.'));
+    download(r.blob, `${base}-${t(isB ? 'bordo-tpu' : 'piastra-pla')}.3mf`);
   } else if (a === 'presets') {
     const files = {
-      'LEGGIMI.txt': 'CaseStudio Open - preset per Bambu Lab A1 mini (ugello 0.4)\r\nBambu Studio: File > Importa > Importa configurazioni, seleziona i 4 file .json.\r\n',
+      [t('LEGGIMI.txt')]: t('CaseStudio Open - preset per Bambu Lab A1 mini (ugello 0.4)\r\nBambu Studio: File > Importa > Importa configurazioni, seleziona i 4 file .json.\r\n'),
       'CaseStudio TPU bordo @A1M.process.json': JSON.stringify(processPreset('tpu', 'CaseStudio TPU bordo @A1M'), null, 2),
       'CaseStudio TPU 95A @A1M.filament.json': JSON.stringify(filamentPreset('tpu', 'CaseStudio TPU 95A @A1M'), null, 2),
       'CaseStudio PLA piastra @A1M.process.json': JSON.stringify(processPreset('pla', 'CaseStudio PLA piastra @A1M'), null, 2),
@@ -519,11 +523,11 @@ async function action(a) {
     };
     download(zip(files), 'casestudio-preset-a1-mini.zip');
   } else if (a === 'fit') {
-    setStatus('Preparo l\'anello di prova', 'busy');
+    setStatus(t("Preparo l'anello di prova"), 'busy');
     const r = await request(true);
     if (r.error) return setStatus(r.error, 'err');
-    download(stl(r.bumper, 'fit-test'), `${base}-anello-di-prova.stl`);
-    setStatus('Anello di prova scaricato', 'ok');
+    download(stl(r.bumper, 'fit-test'), `${base}-${t('anello-di-prova')}.stl`);
+    setStatus(t('Anello di prova scaricato'), 'ok');
     seq++; // invalida risposte in corso del modello principale
     schedule(30);
   }
@@ -541,7 +545,16 @@ function applyAccent() {
   root.setProperty('--on-accent', contrast(ui, '#ffffff') >= 4.5 ? '#ffffff' : '#1c2328');
 }
 
+// ---------- lingua ----------
+function renderLang() {
+  const sel = $('#lang');
+  sel.innerHTML = LANGS.map(([k, n]) => `<option value="${k}" ${k === getLang() ? 'selected' : ''}>${n}</option>`).join('');
+  sel.setAttribute('aria-label', t('Lingua'));
+}
+$('#lang').addEventListener('change', e => { setLang(e.target.value); applyStatic(); renderLang(); render(); renderInfo(); if (last) setStatus(t('Pronto in {0} s', fnum(last.stats.ms / 1000, 1)), 'ok'); });
+
 // ---------- avvio ----------
+setLang(getLang()); applyStatic(); renderLang();
 window.csopen = { viewer, get state() { return P; } };
 render();
 viewer.view('angle');

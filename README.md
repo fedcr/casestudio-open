@@ -5,6 +5,12 @@
 Generatore parametrico di cover per telefono, stampabili in 3D su **Bambu Lab A1 mini senza AMS**.
 Gira interamente nel browser (nessun server): apri `index.html` da un server statico o da GitHub Pages.
 
+## Lingue
+
+Interfaccia in inglese (predefinito), italiano, tedesco, francese e spagnolo, con il selettore in alto a sinistra.
+Le traduzioni stanno in `js/i18n.js` (chiave = testo italiano). Anche i nomi dei file esportati e i messaggi delle
+pause nel 3MF seguono la lingua scelta.
+
 ## Come funziona la cover
 
 | Pezzo | Materiale | Note |
@@ -42,8 +48,8 @@ Le dimensioni esterne (larghezza, altezza, spessore) vengono dalle schede uffici
 
 ## Logo
 
-`assets/logo.svg` e' **provvisorio**: e' il concept C ("Percorso") dei tre in `brand/concepts/`, in attesa della
-scelta definitiva. Il kit completo (colori, lockup, favicon, guida d'uso) si prepara dopo la scelta.
+`assets/logo.svg` e' **provvisorio**: e' il concept C ("Percorso") della prima tornata (`brand/concepts/`). La seconda
+tornata, sul tema "Incastro" (cornice + piastra), e' in `brand/concepts/round2/`, in attesa della scelta definitiva. Il kit completo (colori, lockup, favicon, guida d'uso) si prepara dopo la scelta.
 
 ## Da verificare prima del primo uso
 
