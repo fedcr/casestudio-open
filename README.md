@@ -1,6 +1,6 @@
 # CaseStudio Open
 
-<img src="assets/logo.svg" width="72" alt="CaseStudio Open (logo provvisorio)"> &nbsp; <img src="assets/everythink.png" width="72" alt="EveryThink">
+<img src="assets/logo-horizontal.svg" width="360" alt="CaseStudio Open"> &nbsp;&nbsp; <img src="assets/everythink.png" width="64" alt="EveryThink">
 
 Generatore parametrico di cover per telefono, stampabili in 3D su **Bambu Lab A1 mini senza AMS**.
 Gira interamente nel browser (nessun server): apri `index.html` da un server statico o da GitHub Pages.
@@ -48,8 +48,10 @@ Le dimensioni esterne (larghezza, altezza, spessore) vengono dalle schede uffici
 
 ## Logo
 
-`assets/logo.svg` e' **provvisorio**: e' il concept C ("Percorso") della prima tornata (`brand/concepts/`). La seconda
-tornata, sul tema "Incastro" (cornice + piastra), e' in `brand/concepts/round2/`, in attesa della scelta definitiva. Il kit completo (colori, lockup, favicon, guida d'uso) si prepara dopo la scelta.
+Il simbolo e' l'angolo della cover ingrandito: bordo in TPU (blu), gola, piastra in PLA (inchiostro). Kit completo in
+`brand/kit/` (varianti a colori, a un colore e in negativo, lockup orizzontale e verticale, taglio per le piccole
+dimensioni, favicon e icone web), presentazione in `brand/kit/presentation.html`, regole d'uso in
+[`brand/GUIDELINES.md`](brand/GUIDELINES.md). I concept scartati restano in `brand/concepts/`.
 
 ## Da verificare prima del primo uso
 
