@@ -25,7 +25,7 @@ export function defaults() {
       guard: true,    // anello di protezione fotocamera
       guardH: 0.8,
       camMargin: 1.4,
-      cell: 0.6       // risoluzione del rilievo (mm)
+      cell: 0.5       // risoluzione del rilievo (mm)
     },
     pattern: {
       kind: 'labyrinth',
@@ -35,7 +35,7 @@ export function defaults() {
       twoTone: true,
       // parametri specifici (riempiti dai default del pattern)
       p: {},
-      image: { dataUrl: null, fit: 'cover', zoom: 1, offx: 0, offy: 0, contrast: 1, threshold: 0.5, mode: 'relief', blur: 0.6 },
+      image: { dataUrl: null, fit: 'contain', zoom: 1, offx: 0, offy: 0, contrast: 1.4, threshold: 0.5, auto: true, mode: 'binary', ink: 'dark', blur: 0.2 },
       text: { value: 'CASE', font: 'sans-serif', weight: 800, size: 0.5, angle: 0 }
     },
     mag: {
@@ -46,10 +46,11 @@ export function defaults() {
     },
     buttons: {
       mode: 'tab',    // tab | cutout | closed
-      pad: 'dome',    // dome | flat | ridged
-      extra: 7,       // lunghezza extra della linguetta
-      padH: 1.0,
-      slit: 0.6,
+      pad: 'soft',    // soft | flat | ridged
+      extra: 6,       // lunghezza extra del pad
+      padH: 1.2,
+      slit: 0.7,       // larghezza della gola attorno al pad
+      membrane: 0.8,   // spessore della membrana flessibile
       preload: 0.0,
       enabled: null   // null = tutti
     },

@@ -115,32 +115,37 @@ export function buildCase(M, P, raster) {
   // tasti laterali
   const items = ph.buttons.map((b, idx) => ({ ...b, idx })).filter(b => !BT.enabled || BT.enabled.includes(b.idx));
   const adds = [];
-  const tabH = Math.max(3.4, Math.min(5, T * 0.55));
+  const tabH = Math.max(4, Math.min(7, T * 0.7));
+  const mem = Math.min(BT.membrane, B.wall - 0.6);
   for (const b of items) {
     const sgn = b.side === 'right' ? -1 : 1;       // lato destro visto da davanti = x negativo da dietro
     const yc = H / 2 - b.y;
     const xo = sgn * (W / 2 + tol + B.wall / 2);   // centro parete
+    const xf = sgn * (W / 2 + tol + B.wall);       // faccia esterna
     if (BT.mode === 'cutout') {
       cuts.push(slot(M, sgn, 0, [xo, yc, zBody], b.len + 3, Math.max(4, tabH), B.wall + 2));
     } else if (BT.mode === 'tab') {
-      const L = b.len + BT.extra, g = BT.slit;
-      const depth = B.wall + 2;
-      cuts.push(box(M, sgn, 0, [xo, yc, zBody + tabH / 2 + g / 2], L, g, depth));
-      cuts.push(box(M, sgn, 0, [xo, yc, zBody - tabH / 2 - g / 2], L, g, depth));
-      cuts.push(box(M, sgn, 0, [xo, yc + L / 2 + g / 2, zBody], g, tabH + 2 * g, depth));
+      // pad: stadio in rilievo, circondato da una gola che lascia una membrana flessibile (nessun foro passante)
+      const L = b.len + BT.extra, g = BT.slit, d = B.wall - mem;
+      const groove = slot(M, sgn, 0, [xf + sgn * (1 - d) / 2, yc, zBody], L + 2 * g, tabH + 2 * g, d + 1)
+        .subtract(slot(M, sgn, 0, [xf + sgn * (1 - d) / 2, yc, zBody], L, tabH, d + 3));
+      cuts.push(groove);
       // nub interno che preme il tasto del telefono
       const xin = sgn * (W / 2 - BT.preload), xout = sgn * (W / 2 + tol + 0.4);
-      const nl = Math.abs(xout - xin);
-      adds.push(box(M, sgn, 0, [(xin + xout) / 2, yc, zBody], b.len * 0.7, Math.min(tabH - 0.8, 3), nl));
-      // pad esterno
-      const xf = sgn * (W / 2 + tol + B.wall);
-      const padL = Math.max(6, L - 3);
-      if (BT.pad === 'dome') {
-        adds.push(Manifold.sphere(1, 24).scale([BT.padH, padL / 2 - 0.5, tabH / 2 - 0.4]).translate([xf, yc, zBody]));
-      } else if (BT.pad === 'flat') {
-        adds.push(slot(M, sgn, 0, [xf + sgn * (BT.padH - 0.4) / 2, yc, zBody], padL, tabH - 0.8, BT.padH + 0.4));
-      } else {
-        for (const k of [-1, 0, 1]) adds.push(box(M, sgn, 0, [xf + sgn * (BT.padH - 0.4) / 2, yc + k * 2.4, zBody], 1.0, tabH - 0.8, BT.padH + 0.4));
+      adds.push(slot(M, sgn, 0, [(xin + xout) / 2, yc, zBody], Math.min(b.len * 0.8, L - 3), Math.min(tabH - 1.4, 3.6), Math.abs(xout - xin)));
+      // cappuccio esterno
+      const ph1 = BT.padH;
+      if (BT.pad === 'flat') {
+        adds.push(slot(M, sgn, 0, [xf + sgn * (ph1 - 0.4) / 2, yc, zBody], L - 1, tabH - 1, ph1 + 0.4));
+      } else if (BT.pad === 'soft') {
+        adds.push(slot(M, sgn, 0, [xf + sgn * (0.5 - 0.4) / 2, yc, zBody], L - 1, tabH - 1, 0.9));
+        adds.push(slot(M, sgn, 0, [xf + sgn * (0.5 + (ph1 - 0.5) / 2), yc, zBody], L - 3, tabH - 3, Math.max(0.2, ph1 - 0.5)));
+      } else { // ridged: base con nervature trasversali
+        const cap = slot(M, sgn, 0, [xf + sgn * (ph1 - 0.4) / 2, yc, zBody], L - 1, tabH - 1, ph1 + 0.4);
+        const n = Math.max(2, Math.floor((L - 3) / 2));
+        const gr = [];
+        for (let k = 0; k < n; k++) gr.push(box(M, sgn, 0, [xf + sgn * ph1, yc - (L - 3) / 2 + (k + 0.5) * (L - 3) / n, zBody], 0.7, tabH + 2, ph1 * 0.9 + 0.01));
+        adds.push(cap.subtract(Manifold.union(gr)));
       }
     }
   }
@@ -150,21 +155,24 @@ export function buildCase(M, P, raster) {
   // ---------- piastra ----------
   const plateOutline = rrect(M, W, H, R, B.engage);
   let plate;
-  const cam = ph.cam;
-  const ccx = cam.cx + cam.w / 2 - W / 2, ccy = H / 2 - cam.cy - cam.h / 2;
   const lim = 3.5;
-  const camW = Math.min(cam.w + 2 * PL.camMargin, W - 2 * lim);
-  const camHh = Math.min(cam.h + 2 * PL.camMargin, H - 2 * lim);
-  const camX = Math.max(-W / 2 + lim + camW / 2, Math.min(W / 2 - lim - camW / 2, ccx));
-  const camY = Math.max(-H / 2 + lim + camHh / 2, Math.min(H / 2 - lim - camHh / 2, ccy));
-  const camR = Math.min(cam.r + PL.camMargin, camW / 2, camHh / 2);
-  const camHole = CrossSection.square([Math.max(0.1, camW - 2 * camR), Math.max(0.1, camHh - 2 * camR)], true).offset(camR, 'Round', 2, 36).translate([camX, camY]);
-
+  const camShapes = (ph.cams || []).map(c => {
+    const m = PL.camMargin;
+    let w = c.w + 2 * m, h = c.h + 2 * m;
+    w = Math.min(w, W - 2 * lim); h = Math.min(h, H - 2 * lim);
+    const cx = Math.max(-W / 2 + lim + w / 2, Math.min(W / 2 - lim - w / 2, c.x - W / 2));
+    const cy = Math.max(-H / 2 + lim + h / 2, Math.min(H / 2 - lim - h / 2, H / 2 - c.y));
+    if (c.t === 'c') return CrossSection.circle(Math.min(w, h) / 2, 48).translate([cx, cy]);
+    const r = Math.max(0.1, Math.min(c.r + m, w / 2, h / 2));
+    return CrossSection.square([Math.max(0.1, w - 2 * r), Math.max(0.1, h - 2 * r)], true).offset(r, 'Round', 2, 36).translate([cx, cy]);
+  });
+  const camHole = camShapes.length ? CrossSection.union(camShapes) : null;
   const g = gridSpec(P);
   let hf = null;
   if (hasRelief) {
-    const grid = pat.raster ? (raster && raster.length === g.nx * g.ny ? raster : null) : pat.make(g, { ...patternDefaults(pat.id), ...P.pattern.p }, P.pattern.seed);
+    let grid = pat.raster ? (raster && raster.length === g.nx * g.ny ? raster : null) : pat.make(g, { ...patternDefaults(pat.id), ...P.pattern.p }, P.pattern.seed);
     if (grid) {
+      grid = blur3(grid, g.nx, g.ny);
       const amp = relief;
       const hv = new Float32Array(g.nx * g.ny);
       const hw = W / 2 - R, hh = H / 2 - R;
@@ -178,7 +186,7 @@ export function buildCase(M, P, raster) {
           if (P.pattern.invert) v = 1 - v;
           const m = sd < lim2 ? 1 : 0;
           // quantizza altezza a 0.1 mm per un modello piu' pulito
-          hv[j * g.nx + i] = m ? Math.round(v * amp * 10) / 10 : 0;
+          hv[j * g.nx + i] = m ? Math.round(v * amp * 20) / 20 : 0;
         }
       }
       hf = heightfield(M, g, hv, plateT);
@@ -191,12 +199,13 @@ export function buildCase(M, P, raster) {
     plate = ext(plateOutline, 0, plateT);
   }
   // protezione fotocamera
-  if (PL.guard) {
-    const outer = camHole.offset(1.3, 'Round', 2, 36);
-    const ring = ext(outer.subtract(camHole), 0, plateT + PL.guardH);
-    plate = plate.add(ring.intersect(ext(rrect(M, W, H, R, B.engage - 0.8), 0, plateT + PL.guardH + 1)));
+  if (camHole) {
+    if (PL.guard) {
+      const ring = ext(camHole.offset(1.3, 'Round', 2, 36).subtract(camHole), 0, plateT + PL.guardH);
+      plate = plate.add(ring.intersect(ext(rrect(M, W, H, R, B.engage - 0.8), 0, plateT + PL.guardH + 1)));
+    }
+    plate = plate.subtract(ext(camHole, -1, plateT + PL.guardH + relief + 2));
   }
-  plate = plate.subtract(ext(camHole, -1, plateT + PL.guardH + relief + 2));
 
   // magneti
   const pauses = [];
@@ -226,12 +235,26 @@ export function buildCase(M, P, raster) {
 
   // controlli
   if (Math.max(W, H) + 2 * baseOut > 180) warnings.push('La cover supera il piano di stampa dell\'A1 mini (180 mm).');
-  if (cam.w + 2 * PL.camMargin > W - 2 * lim) warnings.push('L\'isola fotocamera e\' molto larga: il taglio e\' stato limitato per non spezzare la piastra.');
+  if ((ph.cams || []).some(c => c.w + 2 * PL.camMargin > W - 2 * lim)) warnings.push('La fotocamera e\' molto larga: il taglio e\' stato limitato per non spezzare la piastra.');
 
   return {
     bumper, plate,
     meta: { Z, lipT, cavH, zc1, zg1, plateT, rimT, relief, pauses, outerW: W + 2 * baseOut, outerH: H + 2 * baseOut, warnings }
   };
+}
+
+// Sfocatura 3x3: smussa i bordi verticali (stampabili meglio, niente scalini)
+function blur3(a, nx, ny) {
+  const o = new Float32Array(a.length);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    let s = 0, w = 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const x = i + di, y = j + dj; if (x < 0 || y < 0 || x >= nx || y >= ny) continue;
+      const k = (di === 0 ? 2 : 1) * (dj === 0 ? 2 : 1); s += a[y * nx + x] * k; w += k;
+    }
+    o[j * nx + i] = s / w;
+  }
+  return o;
 }
 
 // Heightfield chiuso (top variabile, base piatta a z=0). h = altezza aggiuntiva sopra baseT.

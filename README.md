@@ -1,5 +1,7 @@
 # CaseStudio Open
 
+<img src="assets/logo.svg" width="72" alt="CaseStudio Open"> &nbsp; <img src="assets/everythink.png" width="72" alt="EveryThink">
+
 Generatore parametrico di cover per telefono, stampabili in 3D su **Bambu Lab A1 mini senza AMS**.
 Gira interamente nel browser (nessun server): apri `index.html` da un server statico o da GitHub Pages.
 
@@ -12,16 +14,17 @@ Gira interamente nel browser (nessun server): apri `index.html` da un server sta
 
 Cambiare stile = stampare un'altra piastra (circa 20-40 minuti), il bordo resta lo stesso.
 
-- **Stili e motivi:** labirinto (reazione-diffusione), onde, esagoni, zigrinatura, punti, nervature, curve di livello, Voronoi, immagine tua, testo.
+- **Stili e motivi:** 59 motivi in 4 famiglie (geometrici, linee e tessuti, natura, organici a reazione-diffusione) con miniatura dal vivo, piu' immagine tua (PNG/JPG/SVG, anche trascinata o incollata) e testo.
+- **Editor fotocamere e tasti:** disegno del retro del telefono dove trascini ogni lente e ogni tasto; puoi sovrapporre una foto per allinearli a occhio.
 - **Tattile:** il rilievo arriva a 1,6 mm ed e' protetto dal bordo in TPU.
 - **Due colori senza AMS:** il rilievo e' un secondo colore; il 3MF contiene gia' il cambio filamento al layer giusto.
 - **MagSafe:** tasca per anello magnetico o dischetti, chiusa dentro la piastra. Il 3MF contiene la pausa per inserire i magneti.
-- **Tasti laterali:** linguetta flessibile in TPU con perno interno e pad esterno piu' grande (cupola, piatto, zigrinato). Nessuna parte da comprare, spessore invariato. E' l'equivalente "stampato" dei tasti aggiuntivi: una leva piu' lunga del tasto del telefono.
+- **Tasti laterali:** pad in rilievo su membrana flessibile di TPU (nessun foro) con perno interno che preme il tasto. Piu' lungo del tasto del telefono, quindi fa da leva e si trova al tatto. Nessuna parte da comprare, spessore invariato.
 - **Esportazione:** STL, 3MF per Bambu Studio (A1 mini), ZIP con preset di processo e filamento (TPU e PLA), anello di prova della misura.
 
 ## Da verificare prima del primo uso
 
-- Le misure dei telefoni sono da schede tecniche, arrotondate; i modelli marcati *(stima)* sono provvisori. Posizione di fotocamera e tasti e' approssimata: correggila nei campi e **stampa l'anello di prova**.
+- Le dimensioni dei telefoni sono verificate su schede ufficiali/Wikipedia (iPhone 16/17, Galaxy S24-S26, Pixel 10). Posizione di fotocamere e tasti e' invece **approssimata**: correggila con l'editor e **stampa l'anello di prova**.
 - Il 3MF e i preset sono scritti seguendo il formato di Bambu Studio ma non sono stati aperti in Bambu Studio durante lo sviluppo. Se le impostazioni non si applicano, importa i preset JSON; se mancano le pause, aggiungile a mano ai layer indicati nella scheda Stampa.
 - Le linguette dei tasti e le fessure vanno provate: spessore parete e fessura dipendono dal TPU.
 
@@ -36,5 +39,7 @@ node serve.mjs        # http://localhost:5173
 - `js/worker.js` esegue il calcolo fuori dal thread della UI.
 - `js/export.js` scrive STL, 3MF e preset.
 - Viewer: three.js. Icone: Lucide (ISC). Tutto e' vendorizzato, nessuna CDN tranne i font.
+
+Loghi: `assets/logo.svg` e' il logo del progetto; `assets/everythink.png` e' il logo EveryThink.
 
 Licenza: MIT per il codice. Le librerie in `vendor/` mantengono le proprie licenze (MIT/Apache-2.0).
